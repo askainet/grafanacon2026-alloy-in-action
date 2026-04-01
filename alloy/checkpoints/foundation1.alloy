@@ -1,0 +1,60 @@
+livedebugging {
+  enabled = true
+}
+
+/*
+  Checkpoint: After Foundation 1 — Traces
+  Pipeline: otelcol.receiver.otlp → otelcol.processor.batch → otelcol.exporter.otlphttp
+
+  Mission Control
+        │ OTLP (gRPC :4317, HTTP :4318)
+        ▼
+  ┌───────────────────────┐   ┌─────────────────────────┐   ┌───────────────────────────┐
+  │ otelcol.receiver.otlp │──▶│ otelcol.processor.batch │──▶│ otelcol.exporter.otlphttp │──▶ Tempo
+  └───────────────────────┘   └─────────────────────────┘   └───────────────────────────┘
+    Receive OTLP spans           Batch for efficiency           Push spans to Tempo
+*/
+
+/*
+  [1/3] Receives OTLP spans
+  Note: otelcol components wire together using .input, not .receiver
+  (that's a Prometheus/Loki convention).
+*/
+otelcol.receiver.otlp "default" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    traces = [otelcol.processor.batch.default.input]
+  }
+}
+
+/*
+  [2/3] Batches spans for efficient export
+  timeout ensures spans don't sit forever waiting for a full batch.
+*/
+otelcol.processor.batch "default" {
+  send_batch_size     = 100
+  send_batch_max_size = 200
+  timeout             = "250ms"
+
+  output {
+    traces = [otelcol.exporter.otlphttp.docker_tempo.input]
+  }
+}
+
+// [3/3] pushes spans to Tempo
+otelcol.exporter.otlphttp "docker_tempo" {
+  client {
+    endpoint = "http://tempo:4318"
+    tls {
+      insecure             = true  // plain HTTP — fine for local dev
+      insecure_skip_verify = true
+    }
+  }
+}

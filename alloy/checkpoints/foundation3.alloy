@@ -1,0 +1,192 @@
+livedebugging {
+  enabled = true
+}
+
+/*
+  Checkpoint: After Foundation 3 — Metrics
+  Added: prometheus.scrape → prometheus.relabel → prometheus.remote_write
+  This is the complete foundations config before missions begin.
+*/
+
+// ============================================================================
+// TRACES
+// ============================================================================
+//
+//  Mission Control
+//        │ OTLP (gRPC :4317, HTTP :4318)
+//        ▼
+//  ┌───────────────────────┐   ┌─────────────────────────┐   ┌───────────────────────────┐
+//  │ otelcol.receiver.otlp │──▶│ otelcol.processor.batch │──▶│ otelcol.exporter.otlphttp │──▶ Tempo
+//  └───────────────────────┘   └─────────────────────────┘   └───────────────────────────┘
+//    Receive OTLP spans           Batch for efficiency           Push spans to Tempo
+
+/*
+  [1/3] Receives OTLP spans
+  Note: otelcol components wire together using .input, not .receiver
+  (that's a Prometheus/Loki convention).
+*/
+otelcol.receiver.otlp "default" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    traces = [otelcol.processor.batch.default.input]
+  }
+}
+
+/*
+  [2/3] Batches spans for efficient export
+  timeout ensures spans don't sit forever waiting for a full batch.
+*/
+otelcol.processor.batch "default" {
+  send_batch_size     = 100
+  send_batch_max_size = 200
+  timeout             = "250ms"
+
+  output {
+    traces = [otelcol.exporter.otlphttp.docker_tempo.input]
+  }
+}
+
+// ============================================================================
+// LOGS
+// ============================================================================
+//
+//  /var/log/alloy/*.log (Mission Control)
+//        │
+//        ▼
+//  ┌──────────────────┐   ┌──────────────────┐   ┌──────────────┐   ┌────────────┐
+//  │ local.file_match │──▶│ loki.source.file │──▶│ loki.process │──▶│ loki.write │──▶ Loki
+//  └──────────────────┘   └──────────────────┘   └──────────────┘   └────────────┘
+//    Discovers files         Reads files            Extracts labels    Pushes to Loki
+
+// [1/4] discovers log files at /var/log/alloy/*.log
+local.file_match "mission_control" {
+  path_targets = [{"__path__" = "/var/log/alloy/*.log"}]
+}
+
+// [2/4] reads and tails matched files
+loki.source.file "mission_control" {
+  targets    = local.file_match.mission_control.targets
+  forward_to = [loki.process.mission_control_logs.receiver]
+}
+
+/*
+  [3/4] Extracts data and adds labels
+  Parse JSON logs and promote "component" to an indexed Loki label.
+  Loki labels are indexed — labeling by component lets you filter with
+  {component="agents"} without scanning every log body.
+*/
+loki.process "mission_control_logs" {
+  // Extract fields from the JSON log body into a temporary map
+  stage.json {
+    expressions = {
+      component = "component",
+    }
+  }
+
+  // Promote extracted values to real Loki labels.
+  // An empty string value means "use the extracted value with the same key name."
+  stage.labels {
+    values = {
+      component = "",
+    }
+  }
+
+  forward_to = [loki.write.docker_loki.receiver]
+}
+
+// ============================================================================
+// METRICS
+// ============================================================================
+//
+//  Mission Control
+//        │
+//        ▼
+//  ┌───────────────────┐   ┌────────────────────┐   ┌─────────────────────────┐
+//  │ prometheus.scrape │──▶│ prometheus.relabel │──▶│ prometheus.remote_write │──▶ Mimir
+//  └───────────────────┘   └────────────────────┘   └─────────────────────────┘
+//    Scrapes /metrics         Standardizes labels       Pushes to Mimir
+
+// [1/3] scrapes /metrics endpoint
+prometheus.scrape "mission_control" {
+  scrape_interval = "5s"
+
+  targets    = [{"__address__" = "mission-control:8080"}]
+  forward_to = [prometheus.relabel.normalize_agent_labels.receiver]
+}
+
+/*
+  [2/3] Standardizes labels (id → agent_id, region → country_code)
+
+  Two metrics describe the same agents but use different label names:
+    active_agents{agent_id="ALPHA-007", country_code="US"}
+    agent_comms_total{id="ALPHA-007", region="US"}
+
+  Strategy: copy the value to the canonical name, then drop the old label.
+  regex = "(.+)" matches only when the label is present and non-empty,
+  so the rules are safe no-ops for metrics that already use the right names.
+*/
+prometheus.relabel "normalize_agent_labels" {
+  // id → agent_id
+  rule {
+    action        = "replace"
+    source_labels = ["id"]
+    regex         = "(.+)"
+    target_label  = "agent_id"
+  }
+
+  rule {
+    action = "labeldrop"
+    regex  = "^id$"
+  }
+
+  // region → country_code
+  rule {
+    action        = "replace"
+    source_labels = ["region"]
+    regex         = "(.+)"
+    target_label  = "country_code"
+  }
+
+  rule {
+    action = "labeldrop"
+    regex  = "^region$"
+  }
+
+  forward_to = [prometheus.remote_write.docker_mimir.receiver]
+}
+
+// ============================================================================
+// DESTINATIONS
+// ============================================================================
+
+// [3/3] pushes spans to Tempo
+otelcol.exporter.otlphttp "docker_tempo" {
+  client {
+    endpoint = "http://tempo:4318"
+    tls {
+      insecure             = true  // plain HTTP — fine for local dev
+      insecure_skip_verify = true
+    }
+  }
+}
+
+// [3/3] pushes metrics to Mimir
+prometheus.remote_write "docker_mimir" {
+  endpoint {
+    url = "http://mimir:9009/api/v1/push"
+  }
+}
+
+// [4/4] pushes logs to Loki
+loki.write "docker_loki" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
