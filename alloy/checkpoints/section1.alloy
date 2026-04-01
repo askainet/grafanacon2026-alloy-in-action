@@ -1,10 +1,8 @@
 /*
   Checkpoint: After Section 1 — Metrics
-
-  Pipeline: prometheus.scrape -> prometheus.relabel -> prometheus.remote_write
+  Pipeline: prometheus.scrape → prometheus.relabel → prometheus.remote_write
 */
 
-// Scrape metrics from Mission Control
 prometheus.scrape "mission_control" {
   scrape_interval = "5s"
 
@@ -12,14 +10,21 @@ prometheus.scrape "mission_control" {
   forward_to = [prometheus.relabel.normalize_agent_labels.receiver]
 }
 
-// Normalize label names so active_agents and agent_comms_total use consistent labels
-// active_agents uses "agent_id" and "country_code"
-// agent_comms_total uses "id" and "region"
+/*
+  Two metrics describe the same agents but use different label names:
+    active_agents{agent_id="ALPHA-007", country_code="US"}
+    agent_comms_total{id="ALPHA-007", region="US"}
+
+  Strategy: copy the value to the canonical name, then drop the old label.
+  regex = "(.+)" matches only when the label is present and non-empty,
+  so the rules are safe no-ops for metrics that already use the right names.
+*/
 prometheus.relabel "normalize_agent_labels" {
+  // id → agent_id
   rule {
     action        = "replace"
     source_labels = ["id"]
-    regex         = ".+"
+    regex         = "(.+)"
     target_label  = "agent_id"
   }
 
@@ -28,10 +33,11 @@ prometheus.relabel "normalize_agent_labels" {
     regex  = "^id$"
   }
 
+  // region → country_code
   rule {
     action        = "replace"
     source_labels = ["region"]
-    regex         = ".+"
+    regex         = "(.+)"
     target_label  = "country_code"
   }
 
@@ -42,8 +48,6 @@ prometheus.relabel "normalize_agent_labels" {
 
   forward_to = [prometheus.remote_write.local.receiver]
 }
-
-// ---- Destinations ----
 
 prometheus.remote_write "local" {
   endpoint {

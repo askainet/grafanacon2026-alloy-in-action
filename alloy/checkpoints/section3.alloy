@@ -1,11 +1,12 @@
 /*
   Checkpoint: After Section 3 — Traces
-
-  Added: otelcol.receiver.otlp -> otelcol.processor.batch -> otelcol.exporter.otlphttp
-  This is the base config before missions begin.
+  Added: otelcol.receiver.otlp → otelcol.processor.batch → otelcol.exporter.otlphttp
+  This is the complete foundations config before missions begin.
 */
 
-// ---- Section 1: Metrics ----
+// ============================================================================
+// METRICS
+// ============================================================================
 
 prometheus.scrape "mission_control" {
   scrape_interval = "5s"
@@ -14,11 +15,21 @@ prometheus.scrape "mission_control" {
   forward_to = [prometheus.relabel.normalize_agent_labels.receiver]
 }
 
+/*
+  Two metrics describe the same agents but use different label names:
+    active_agents{agent_id="ALPHA-007", country_code="US"}
+    agent_comms_total{id="ALPHA-007", region="US"}
+
+  Strategy: copy the value to the canonical name, then drop the old label.
+  regex = "(.+)" matches only when the label is present and non-empty,
+  so the rules are safe no-ops for metrics that already use the right names.
+*/
 prometheus.relabel "normalize_agent_labels" {
+  // id → agent_id
   rule {
     action        = "replace"
     source_labels = ["id"]
-    regex         = ".+"
+    regex         = "(.+)"
     target_label  = "agent_id"
   }
 
@@ -27,10 +38,11 @@ prometheus.relabel "normalize_agent_labels" {
     regex  = "^id$"
   }
 
+  // region → country_code
   rule {
     action        = "replace"
     source_labels = ["region"]
-    regex         = ".+"
+    regex         = "(.+)"
     target_label  = "country_code"
   }
 
@@ -42,24 +54,36 @@ prometheus.relabel "normalize_agent_labels" {
   forward_to = [prometheus.remote_write.local.receiver]
 }
 
-// ---- Section 2: Logs ----
+// ============================================================================
+// LOGS
+// ============================================================================
 
+// Discover log files written by mission-control to the shared volume
 local.file_match "mission_control" {
   path_targets = [{"__path__" = "/var/log/alloy/*.log"}]
 }
 
+// Tail matched files and stream new lines downstream
 loki.source.file "mission_control" {
   targets    = local.file_match.mission_control.targets
   forward_to = [loki.process.mission_control_logs.receiver]
 }
 
+/*
+  Parse JSON logs and promote "component" to an indexed Loki label.
+  Loki labels are indexed — labeling by component lets you filter with
+  {component="agents"} without scanning every log body.
+*/
 loki.process "mission_control_logs" {
+  // Extract fields from the JSON log body into a temporary map
   stage.json {
     expressions = {
       component = "component",
     }
   }
 
+  // Promote extracted values to real Loki labels.
+  // An empty string value means "use the extracted value with the same key name."
   stage.labels {
     values = {
       component = "",
@@ -69,8 +93,15 @@ loki.process "mission_control_logs" {
   forward_to = [loki.write.local.receiver]
 }
 
-// ---- Section 3: Traces ----
+// ============================================================================
+// TRACES
+// ============================================================================
 
+/*
+  Receive OTLP traces over gRPC (4317) and HTTP (4318).
+  Note: otelcol components wire together using .input, not .receiver
+  (that's a Prometheus/Loki convention).
+*/
 otelcol.receiver.otlp "default" {
   grpc {
     endpoint = "0.0.0.0:4317"
@@ -85,6 +116,10 @@ otelcol.receiver.otlp "default" {
   }
 }
 
+/*
+  Buffer spans and flush in batches for efficient export.
+  timeout ensures spans don't sit forever waiting for a full batch.
+*/
 otelcol.processor.batch "default" {
   send_batch_size     = 100
   send_batch_max_size = 200
@@ -99,13 +134,15 @@ otelcol.exporter.otlphttp "tempo" {
   client {
     endpoint = "http://tempo:4318"
     tls {
-      insecure             = true
+      insecure             = true  // plain HTTP — fine for local dev
       insecure_skip_verify = true
     }
   }
 }
 
-// ---- Destinations ----
+// ============================================================================
+// DESTINATIONS
+// ============================================================================
 
 prometheus.remote_write "local" {
   endpoint {

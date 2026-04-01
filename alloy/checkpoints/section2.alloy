@@ -1,10 +1,11 @@
 /*
   Checkpoint: After Section 2 — Logs
-
-  Added: local.file_match -> loki.source.file -> loki.process -> loki.write
+  Added: local.file_match → loki.source.file → loki.process → loki.write
 */
 
-// ---- Section 1: Metrics ----
+// ============================================================================
+// METRICS
+// ============================================================================
 
 prometheus.scrape "mission_control" {
   scrape_interval = "5s"
@@ -13,11 +14,21 @@ prometheus.scrape "mission_control" {
   forward_to = [prometheus.relabel.normalize_agent_labels.receiver]
 }
 
+/*
+  Two metrics describe the same agents but use different label names:
+    active_agents{agent_id="ALPHA-007", country_code="US"}
+    agent_comms_total{id="ALPHA-007", region="US"}
+
+  Strategy: copy the value to the canonical name, then drop the old label.
+  regex = "(.+)" matches only when the label is present and non-empty,
+  so the rules are safe no-ops for metrics that already use the right names.
+*/
 prometheus.relabel "normalize_agent_labels" {
+  // id → agent_id
   rule {
     action        = "replace"
     source_labels = ["id"]
-    regex         = ".+"
+    regex         = "(.+)"
     target_label  = "agent_id"
   }
 
@@ -26,10 +37,11 @@ prometheus.relabel "normalize_agent_labels" {
     regex  = "^id$"
   }
 
+  // region → country_code
   rule {
     action        = "replace"
     source_labels = ["region"]
-    regex         = ".+"
+    regex         = "(.+)"
     target_label  = "country_code"
   }
 
@@ -41,24 +53,36 @@ prometheus.relabel "normalize_agent_labels" {
   forward_to = [prometheus.remote_write.local.receiver]
 }
 
-// ---- Section 2: Logs ----
+// ============================================================================
+// LOGS
+// ============================================================================
 
+// Discover log files written by mission-control to the shared volume
 local.file_match "mission_control" {
   path_targets = [{"__path__" = "/var/log/alloy/*.log"}]
 }
 
+// Tail matched files and stream new lines downstream
 loki.source.file "mission_control" {
   targets    = local.file_match.mission_control.targets
   forward_to = [loki.process.mission_control_logs.receiver]
 }
 
+/*
+  Parse JSON logs and promote "component" to an indexed Loki label.
+  Loki labels are indexed — labeling by component lets you filter with
+  {component="agents"} without scanning every log body.
+*/
 loki.process "mission_control_logs" {
+  // Extract fields from the JSON log body into a temporary map
   stage.json {
     expressions = {
       component = "component",
     }
   }
 
+  // Promote extracted values to real Loki labels.
+  // An empty string value means "use the extracted value with the same key name."
   stage.labels {
     values = {
       component = "",
@@ -68,7 +92,9 @@ loki.process "mission_control_logs" {
   forward_to = [loki.write.local.receiver]
 }
 
-// ---- Destinations ----
+// ============================================================================
+// DESTINATIONS
+// ============================================================================
 
 prometheus.remote_write "local" {
   endpoint {
