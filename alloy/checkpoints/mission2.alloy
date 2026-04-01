@@ -19,7 +19,7 @@ prometheus.relabel "normalize_agent_labels" {
   rule {
     action        = "replace"
     source_labels = ["id"]
-    regex         = ".+"
+    regex         = "(.+)"
     target_label  = "agent_id"
   }
 
@@ -31,7 +31,7 @@ prometheus.relabel "normalize_agent_labels" {
   rule {
     action        = "replace"
     source_labels = ["region"]
-    regex         = ".+"
+    regex         = "(.+)"
     target_label  = "country_code"
   }
 
@@ -102,11 +102,11 @@ otelcol.processor.batch "s3_logs" {
   send_batch_max_size = 200
 
   output {
-    logs = [otelcol.exporter.awss3.debug_logs.input]
+    logs = [otelcol.exporter.awss3.audit_logs.input]
   }
 }
 
-otelcol.exporter.awss3 "debug_logs" {
+otelcol.exporter.awss3 "audit_logs" {
   s3_uploader {
     disable_ssl         = true
     s3_bucket           = "audit-logs"

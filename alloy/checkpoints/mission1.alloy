@@ -18,7 +18,7 @@ prometheus.relabel "normalize_agent_labels" {
   rule {
     action        = "replace"
     source_labels = ["id"]
-    regex         = ".+"
+    regex         = "(.+)"
     target_label  = "agent_id"
   }
 
@@ -30,7 +30,7 @@ prometheus.relabel "normalize_agent_labels" {
   rule {
     action        = "replace"
     source_labels = ["region"]
-    regex         = ".+"
+    regex         = "(.+)"
     target_label  = "country_code"
   }
 
