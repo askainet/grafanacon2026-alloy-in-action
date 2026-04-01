@@ -1,0 +1,83 @@
+/*
+  Checkpoint: After Section 2 — Logs
+
+  Added: local.file_match -> loki.source.file -> loki.process -> loki.write
+*/
+
+// ---- Section 1: Metrics ----
+
+prometheus.scrape "mission_control" {
+  scrape_interval = "5s"
+
+  targets    = [{"__address__" = "mission-control:8080"}]
+  forward_to = [prometheus.relabel.normalize_agent_labels.receiver]
+}
+
+prometheus.relabel "normalize_agent_labels" {
+  rule {
+    action        = "replace"
+    source_labels = ["id"]
+    regex         = ".+"
+    target_label  = "agent_id"
+  }
+
+  rule {
+    action = "labeldrop"
+    regex  = "^id$"
+  }
+
+  rule {
+    action        = "replace"
+    source_labels = ["region"]
+    regex         = ".+"
+    target_label  = "country_code"
+  }
+
+  rule {
+    action = "labeldrop"
+    regex  = "^region$"
+  }
+
+  forward_to = [prometheus.remote_write.local.receiver]
+}
+
+// ---- Section 2: Logs ----
+
+local.file_match "mission_control" {
+  path_targets = [{"__path__" = "/var/log/alloy/*.log"}]
+}
+
+loki.source.file "mission_control" {
+  targets    = local.file_match.mission_control.targets
+  forward_to = [loki.process.mission_control_logs.receiver]
+}
+
+loki.process "mission_control_logs" {
+  stage.json {
+    expressions = {
+      component = "component",
+    }
+  }
+
+  stage.labels {
+    values = {
+      component = "",
+    }
+  }
+
+  forward_to = [loki.write.local.receiver]
+}
+
+// ---- Destinations ----
+
+prometheus.remote_write "local" {
+  endpoint {
+    url = "http://mimir:9009/api/v1/push"
+  }
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

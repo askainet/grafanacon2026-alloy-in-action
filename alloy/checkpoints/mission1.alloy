@@ -1,0 +1,136 @@
+/*
+  Checkpoint: After Mission 1 — High Cardinality
+
+  Added: remote.http + prometheus.relabel "keep" filter for legitimate paths
+  Changed: normalize_agent_labels now forwards through the cardinality filter
+*/
+
+// ---- Section 1: Metrics ----
+
+prometheus.scrape "mission_control" {
+  scrape_interval = "5s"
+
+  targets    = [{"__address__" = "mission-control:8080"}]
+  forward_to = [prometheus.relabel.normalize_agent_labels.receiver]
+}
+
+prometheus.relabel "normalize_agent_labels" {
+  rule {
+    action        = "replace"
+    source_labels = ["id"]
+    regex         = ".+"
+    target_label  = "agent_id"
+  }
+
+  rule {
+    action = "labeldrop"
+    regex  = "^id$"
+  }
+
+  rule {
+    action        = "replace"
+    source_labels = ["region"]
+    regex         = ".+"
+    target_label  = "country_code"
+  }
+
+  rule {
+    action = "labeldrop"
+    regex  = "^region$"
+  }
+
+  // Changed: route through Mission 1 filter instead of directly to remote_write
+  forward_to = [prometheus.relabel.mission1.receiver]
+}
+
+// Mission 1: Fetch legitimate paths and filter out rogue probes
+remote.http "allowed_paths_regex" {
+  url = "http://mission-control:8080/api/metrics/allowed-paths"
+}
+
+prometheus.relabel "mission1" {
+  rule {
+    action        = "keep"
+    source_labels = ["path"]
+    regex         = encoding.from_json(remote.http.allowed_paths_regex.content).regex
+  }
+
+  forward_to = [prometheus.remote_write.local.receiver]
+}
+
+// ---- Section 2: Logs ----
+
+local.file_match "mission_control" {
+  path_targets = [{"__path__" = "/var/log/alloy/*.log"}]
+}
+
+loki.source.file "mission_control" {
+  targets    = local.file_match.mission_control.targets
+  forward_to = [loki.process.mission_control_logs.receiver]
+}
+
+loki.process "mission_control_logs" {
+  stage.json {
+    expressions = {
+      component = "component",
+    }
+  }
+
+  stage.labels {
+    values = {
+      component = "",
+    }
+  }
+
+  forward_to = [loki.write.local.receiver]
+}
+
+// ---- Section 3: Traces ----
+
+otelcol.receiver.otlp "default" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    traces = [otelcol.processor.batch.default.input]
+  }
+}
+
+otelcol.processor.batch "default" {
+  send_batch_size     = 100
+  send_batch_max_size = 200
+  timeout             = "250ms"
+
+  output {
+    traces = [otelcol.exporter.otlphttp.tempo.input]
+  }
+}
+
+otelcol.exporter.otlphttp "tempo" {
+  client {
+    endpoint = "http://tempo:4318"
+    tls {
+      insecure             = true
+      insecure_skip_verify = true
+    }
+  }
+}
+
+// ---- Destinations ----
+
+prometheus.remote_write "local" {
+  endpoint {
+    url = "http://mimir:9009/api/v1/push"
+  }
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

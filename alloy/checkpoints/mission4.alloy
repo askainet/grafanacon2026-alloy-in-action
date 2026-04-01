@@ -1,0 +1,222 @@
+/*
+  Checkpoint: After Mission 4 — Tail Sampling
+
+  Changed: Replaced probabilistic_sampler with tail_sampling
+  Policies: keep ALL errors (token fragments) + 5% of normal traces
+*/
+
+// ---- Section 1: Metrics ----
+
+prometheus.scrape "mission_control" {
+  scrape_interval = "5s"
+
+  targets    = [{"__address__" = "mission-control:8080"}]
+  forward_to = [prometheus.relabel.normalize_agent_labels.receiver]
+}
+
+prometheus.relabel "normalize_agent_labels" {
+  rule {
+    action        = "replace"
+    source_labels = ["id"]
+    regex         = ".+"
+    target_label  = "agent_id"
+  }
+
+  rule {
+    action = "labeldrop"
+    regex  = "^id$"
+  }
+
+  rule {
+    action        = "replace"
+    source_labels = ["region"]
+    regex         = ".+"
+    target_label  = "country_code"
+  }
+
+  rule {
+    action = "labeldrop"
+    regex  = "^region$"
+  }
+
+  forward_to = [prometheus.relabel.mission1.receiver]
+}
+
+remote.http "allowed_paths_regex" {
+  url = "http://mission-control:8080/api/metrics/allowed-paths"
+}
+
+prometheus.relabel "mission1" {
+  rule {
+    action        = "keep"
+    source_labels = ["path"]
+    regex         = encoding.from_json(remote.http.allowed_paths_regex.content).regex
+  }
+
+  forward_to = [prometheus.remote_write.local.receiver]
+}
+
+// ---- Section 2: Logs ----
+
+local.file_match "mission_control" {
+  path_targets = [{"__path__" = "/var/log/alloy/*.log"}]
+}
+
+loki.source.file "mission_control" {
+  targets    = local.file_match.mission_control.targets
+  forward_to = [loki.process.mission_control_logs.receiver]
+}
+
+loki.process "mission_control_logs" {
+  stage.json {
+    expressions = {
+      component = "component",
+    }
+  }
+
+  stage.labels {
+    values = {
+      component = "",
+    }
+  }
+
+  forward_to = [
+    otelcol.receiver.loki.all_logs.receiver,
+    loki.process.filter_debug.receiver,
+  ]
+}
+
+otelcol.receiver.loki "all_logs" {
+  output {
+    logs = [otelcol.processor.batch.s3_logs.input]
+  }
+}
+
+otelcol.processor.batch "s3_logs" {
+  timeout             = "10s"
+  send_batch_size     = 100
+  send_batch_max_size = 200
+
+  output {
+    logs = [otelcol.exporter.awss3.debug_logs.input]
+  }
+}
+
+otelcol.exporter.awss3 "debug_logs" {
+  s3_uploader {
+    disable_ssl         = true
+    s3_bucket           = "audit-logs"
+    s3_prefix           = "logs"
+    endpoint            = "http://localstack:4566"
+    s3_force_path_style = true
+  }
+
+  marshaler {
+    type = "body"
+  }
+
+  sending_queue {
+    batch {
+      flush_timeout = "500ms"
+      min_size      = 100
+      sizer         = "items"
+    }
+  }
+}
+
+loki.process "filter_debug" {
+  stage.json {
+    expressions = {
+      level = "level",
+    }
+  }
+
+  stage.drop {
+    source = "level"
+    value  = "DEBUG"
+  }
+
+  forward_to = [loki.write.local.receiver]
+}
+
+// ---- Section 3: Traces ----
+
+otelcol.receiver.otlp "default" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    // Changed: route through tail sampler instead of head sampler
+    traces = [otelcol.processor.tail_sampling.mission4.input]
+  }
+}
+
+// Mission 4: Keep all errors + 5% of normal traces
+otelcol.processor.tail_sampling "mission4" {
+  decision_wait               = "10s"
+  num_traces                  = 100000
+  expected_new_traces_per_sec = 100
+
+  // Keep ALL traces with error status (contain token fragments)
+  policy {
+    name = "keep_all_errors"
+    type = "status_code"
+
+    status_code {
+      status_codes = ["ERROR"]
+    }
+  }
+
+  // Sample 5% of everything else
+  policy {
+    name = "sample_normal_traffic"
+    type = "probabilistic"
+
+    probabilistic {
+      sampling_percentage = 5.0
+    }
+  }
+
+  output {
+    traces = [otelcol.processor.batch.default.input]
+  }
+}
+
+otelcol.processor.batch "default" {
+  send_batch_size     = 100
+  send_batch_max_size = 200
+  timeout             = "250ms"
+
+  output {
+    traces = [otelcol.exporter.otlphttp.tempo.input]
+  }
+}
+
+otelcol.exporter.otlphttp "tempo" {
+  client {
+    endpoint = "http://tempo:4318"
+    tls {
+      insecure             = true
+      insecure_skip_verify = true
+    }
+  }
+}
+
+// ---- Destinations ----
+
+prometheus.remote_write "local" {
+  endpoint {
+    url = "http://mimir:9009/api/v1/push"
+  }
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
