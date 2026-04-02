@@ -1,8 +1,17 @@
 /*
   Checkpoint: After Section 1 — Metrics
   Pipeline: prometheus.scrape → prometheus.relabel → prometheus.remote_write
+
+  Mission Control
+        │
+        ▼
+  ┌───────────────────┐   ┌────────────────────┐   ┌─────────────────────────┐
+  │ prometheus.scrape │──▶│ prometheus.relabel │──▶│ prometheus.remote_write │──▶ Mimir
+  └───────────────────┘   └────────────────────┘   └─────────────────────────┘
+    Scrapes /metrics         Standardizes labels       Pushes to Mimir
 */
 
+// [1/3] scrapes /metrics endpoint
 prometheus.scrape "mission_control" {
   scrape_interval = "5s"
 
@@ -11,6 +20,8 @@ prometheus.scrape "mission_control" {
 }
 
 /*
+  [2/3] Standardizes labels (id → agent_id, region → country_code)
+
   Two metrics describe the same agents but use different label names:
     active_agents{agent_id="ALPHA-007", country_code="US"}
     agent_comms_total{id="ALPHA-007", region="US"}
@@ -49,6 +60,7 @@ prometheus.relabel "normalize_agent_labels" {
   forward_to = [prometheus.remote_write.local.receiver]
 }
 
+// [3/3] pushes metrics to Mimir
 prometheus.remote_write "local" {
   endpoint {
     url = "http://mimir:9009/api/v1/push"
