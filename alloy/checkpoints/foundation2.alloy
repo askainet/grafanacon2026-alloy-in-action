@@ -1,67 +1,51 @@
 /*
-  Checkpoint: After Section 2 — Logs
+  Checkpoint: After Foundation 2 — Logs
   Added: local.file_match → loki.source.file → loki.process → loki.write
 */
 
 // ============================================================================
-// METRICS
+// TRACES
 // ============================================================================
 //
 //  Mission Control
-//        │
+//        │ OTLP (gRPC :4317, HTTP :4318)
 //        ▼
-//  ┌───────────────────┐   ┌────────────────────┐   ┌─────────────────────────┐
-//  │ prometheus.scrape │──▶│ prometheus.relabel │──▶│ prometheus.remote_write │──▶ Mimir
-//  └───────────────────┘   └────────────────────┘   └─────────────────────────┘
-//    Scrapes /metrics         Standardizes labels       Pushes to Mimir
+//  ┌───────────────────────┐   ┌─────────────────────────┐   ┌───────────────────────────┐
+//  │ otelcol.receiver.otlp │──▶│ otelcol.processor.batch │──▶│ otelcol.exporter.otlphttp │──▶ Tempo
+//  └───────────────────────┘   └─────────────────────────┘   └───────────────────────────┘
+//    Receive OTLP spans           Batch for efficiency           Push spans to Tempo
 
-// [1/3] scrapes /metrics endpoint
-prometheus.scrape "mission_control" {
-  scrape_interval = "5s"
+/*
+  [1/3] Receives OTLP spans
+  Note: otelcol components wire together using .input, not .receiver
+  (that's a Prometheus/Loki convention).
+*/
+otelcol.receiver.otlp "default" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
 
-  targets    = [{"__address__" = "mission-control:8080"}]
-  forward_to = [prometheus.relabel.normalize_agent_labels.receiver]
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    traces = [otelcol.processor.batch.default.input]
+  }
 }
 
 /*
-  [2/3] Standardizes labels (id → agent_id, region → country_code)
-
-  Two metrics describe the same agents but use different label names:
-    active_agents{agent_id="ALPHA-007", country_code="US"}
-    agent_comms_total{id="ALPHA-007", region="US"}
-
-  Strategy: copy the value to the canonical name, then drop the old label.
-  regex = "(.+)" matches only when the label is present and non-empty,
-  so the rules are safe no-ops for metrics that already use the right names.
+  [2/3] Batches spans for efficient export
+  timeout ensures spans don't sit forever waiting for a full batch.
 */
-prometheus.relabel "normalize_agent_labels" {
-  // id → agent_id
-  rule {
-    action        = "replace"
-    source_labels = ["id"]
-    regex         = "(.+)"
-    target_label  = "agent_id"
-  }
+otelcol.processor.batch "default" {
+  send_batch_size     = 100
+  send_batch_max_size = 200
+  timeout             = "250ms"
 
-  rule {
-    action = "labeldrop"
-    regex  = "^id$"
+  output {
+    traces = [otelcol.exporter.otlphttp.tempo.input]
   }
-
-  // region → country_code
-  rule {
-    action        = "replace"
-    source_labels = ["region"]
-    regex         = "(.+)"
-    target_label  = "country_code"
-  }
-
-  rule {
-    action = "labeldrop"
-    regex  = "^region$"
-  }
-
-  forward_to = [prometheus.remote_write.local.receiver]
 }
 
 // ============================================================================
@@ -116,10 +100,14 @@ loki.process "mission_control_logs" {
 // DESTINATIONS
 // ============================================================================
 
-// [3/3] pushes metrics to Mimir
-prometheus.remote_write "local" {
-  endpoint {
-    url = "http://mimir:9009/api/v1/push"
+// [3/3] pushes spans to Tempo
+otelcol.exporter.otlphttp "tempo" {
+  client {
+    endpoint = "http://tempo:4318"
+    tls {
+      insecure             = true  // plain HTTP — fine for local dev
+      insecure_skip_verify = true
+    }
   }
 }
 
