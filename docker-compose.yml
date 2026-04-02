@@ -25,7 +25,7 @@ services:
       - alloy
 
   alloy:
-    image: grafana/alloy:v1.15.0
+    image: grafana/alloy:v1.15.0@sha256:579582bce40049f2e27bd1e445000689c907a41f0495cb0d0c7f65609316ba7c
     ports:
       - "12347:12345"  # Alloy UI
       - "4317:4317"    # OTLP gRPC receiver
@@ -48,7 +48,7 @@ services:
     restart: unless-stopped
 
   grafana:
-    image: grafana/grafana:12.3
+    image: grafana/grafana:12.3@sha256:ee4573c0ff6b558d1690c2f453b440183df32392d9619e6216c504795e4458e8
     ports:
       - "3000:3000"
     volumes:
@@ -65,7 +65,7 @@ services:
     restart: unless-stopped
 
   loki:
-    image: grafana/loki:3.6.3
+    image: grafana/loki:3.6.3@sha256:cd6e176883a90c21755f0315688668991634143423f75bdedfef41441b0fdc3c
     ports:
       - "3100:3100"
     volumes:
@@ -76,7 +76,7 @@ services:
     restart: unless-stopped
 
   tempo:
-    image: grafana/tempo:2.9.0
+    image: grafana/tempo:2.9.0@sha256:65a5789759435f1ef696f1953258b9bbdb18eb571d5ce711ff812d2e128288a4
     ports:
       - "3200:3200"
       - "4317"  # OTLP gRPC (not exposed to host)
@@ -88,7 +88,7 @@ services:
     restart: unless-stopped
 
   mimir:
-    image: grafana/mimir:3.0.2
+    image: grafana/mimir:3.0.2@sha256:4231caf9be780e5d9113449e57a0258d388124aca74c0a14b9cf8857e23aad76
     ports:
       - "9009:9009"
     volumes:
@@ -99,7 +99,7 @@ services:
     restart: unless-stopped
 
   localstack:
-    image: localstack/localstack:4.14.0
+    image: localstack/localstack:4.14.0@sha256:3ebc37595918b8accb852f8048fef2aff047d465167edd655528065b07bc364a
     environment:
       - SERVICES=s3
     ports:
@@ -111,7 +111,7 @@ services:
     restart: unless-stopped
 
   localstack-init:
-    image: curlimages/curl:latest
+    image: curlimages/curl:latest@sha256:d94d07ba9e7d6de898b6d96c1a072f6f8266c687af78a74f380087a0addf5d17
     depends_on:
       - localstack
     entrypoint: /bin/sh
