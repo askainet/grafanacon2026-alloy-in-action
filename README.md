@@ -63,7 +63,7 @@ Before getting started, make sure you:
   
 - clone the repo for the learning environment :
 ```
-git clone <UPDATE WITH THE OFFICIAL REPO HERE>
+git clone https://github.com/grafana/grafanacon2026-alloy-in-action.git
 ```
 
 To start the environment, run the following command from within the project's root directory:
@@ -219,7 +219,7 @@ config reloaded
 ### Verify Your Work
 
 1. Open **Grafana** at http://localhost:3000
-2. Go go the dasbhaord the **Mission Control Overview** dashboard. The Traces panel at the bottom should now show data.
+2. Go to the **Mission Control Overview** dashboard. The Traces panel at the bottom should now show data.
 <img width="2502" height="1407" alt="image" src="https://github.com/user-attachments/assets/000ff34f-3869-4744-a604-211f84587f90" />
 <img width="2512" height="1411" alt="image" src="https://github.com/user-attachments/assets/33dc061c-b87f-4c77-b4d5-4947509d5f65" />
 3. When you click on one the traces, you can see the full breakdown of what happened and how long it took
@@ -387,7 +387,7 @@ Next, open Explore from the Grafana sidebar.
 Explore is Grafana's query playground. It lets you run ad-hoc queries without building a dashboard.
 
 Select Loki as the data source and try this query:
-{component="agents"}
+`{component="agents"}`
 
 You should see logs filtered to just field agent activity. 
 <img width="2509" height="1405" alt="image" src="https://github.com/user-attachments/assets/ce5b5337-78da-4eb1-b17e-0859435b046b" />
@@ -504,9 +504,6 @@ prometheus.remote_write "local" {
 }
 
 ```
-
-// Step 2: Normalize label names
-
 <details>
 <summary>Full solution</summary>
 
