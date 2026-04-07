@@ -63,18 +63,34 @@ Before getting started, make sure you:
   
 - clone the repo for the learning environment :
 ```
-git clone <UPDATE WITH THE OFFICIAL REPO HERE>
+git clone https://github.com/grafana/grafanacon2026-alloy-in-action.git
 ```
 
 To start the environment, run the following command from within the project's root directory:
 ```
 make start     
 ```
+You should see the following message in the terminal:
+✅ Mission Control is online
+Health check: curl http://localhost:8080/health
 
 To stop the environment, run the following command from within the project's root directory:
 ```
 make stop
 ```
+Additional verification steps for setup:
+Open http://localhost:3000. You should see Grafana page. 
+<img width="1165" height="597" alt="image" src="https://github.com/user-attachments/assets/957de535-29a9-4c31-8dc6-6d1dad4f89f8" />
+
+Open http://localhost:12347. You should see the Alloy UI.
+<img width="1158" height="473" alt="image" src="https://github.com/user-attachments/assets/f4b1c71d-6f05-4c45-b8ee-6ec5d2bfb898" />
+
+If everything loads, you're good to go!
+
+Troubleshooting
+- Docker not running? Start Docker Desktop and try again.
+- Port conflicts? Make sure ports 3000, 12347, 4317, and 4318 are free.
+
 Open the project using a text editor of your choice.
 - Expand the `alloy/` folder and open the `config.alloy` file.
 - We will use this file to build pipelines for the training exercises and missions.
