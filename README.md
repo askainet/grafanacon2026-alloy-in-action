@@ -1,6 +1,4 @@
-# Grafana Alloy in Action
-
-<img width="1059" height="592" alt="image" src="https://github.com/user-attachments/assets/7971d341-29de-4bed-88d7-c419c653ef90" />
+<img width="1421" height="827" alt="image" src="https://github.com/user-attachments/assets/92e10a43-cf62-4a52-a2de-14ee3d1578c8" />
 
 <img width="2509" height="1406" alt="image" src="https://github.com/user-attachments/assets/e3a18293-1ffc-4405-8dbe-cd8179227344" />
 
