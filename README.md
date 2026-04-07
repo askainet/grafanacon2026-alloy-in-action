@@ -69,6 +69,7 @@ To start the environment, run the following command from within the project's ro
 make start     
 ```
 You should see the following message in the terminal:
+
 ✅ Mission Control is online
 Health check: curl http://localhost:8080/health
 
@@ -77,7 +78,8 @@ To stop the environment, run the following command from within the project's roo
 make stop
 ```
 Additional verification steps for setup:
-Open http://localhost:3000. You should see Grafana page. 
+
+Open http://localhost:3000. You should see the Grafana page. 
 <img width="1165" height="597" alt="image" src="https://github.com/user-attachments/assets/957de535-29a9-4c31-8dc6-6d1dad4f89f8" />
 
 Open http://localhost:12347. You should see the Alloy UI.
