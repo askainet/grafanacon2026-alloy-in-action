@@ -235,10 +235,15 @@ config reloaded
 ### Verify Your Work
 
 1. Open **Grafana** at http://localhost:3000
-2. Go go the dasbhaord the **Mission Control Overview** dashboard. The Traces panel at the bottom should now show data.
+2. Go to the dashboard **Mission Control Overview** dashboard. 
 <img width="2502" height="1407" alt="image" src="https://github.com/user-attachments/assets/000ff34f-3869-4744-a604-211f84587f90" />
+
+The Traces panel at the bottom should now show data.
+
 <img width="2512" height="1411" alt="image" src="https://github.com/user-attachments/assets/33dc061c-b87f-4c77-b4d5-4947509d5f65" />
-3. When you click on one the traces, you can see the full breakdown of what happened and how long it took
+
+3. When you click on one of the traces, you can see the full breakdown of what happened and how long it took.
+
 <img width="2511" height="1414" alt="image" src="https://github.com/user-attachments/assets/21b3c77c-c918-4e77-bb7f-b7969da3485a" />
 
 ## Logs
