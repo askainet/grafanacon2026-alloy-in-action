@@ -253,7 +253,7 @@ The Traces panel at the bottom should now show data.
 <img width="2503" height="1409" alt="image" src="https://github.com/user-attachments/assets/d5f91a67-44db-4b4a-8bcb-b0c459cb8e85" />
 
 - Use [`local.file_match`](https://grafana.com/docs/alloy/latest/reference/components/local/local.file_match/) to discover log files
-- Use [`loki.source.file`](https://grafana.com/docs/alloy/latest/reference/components/loki/loki.source.file/) to tail and read log files
+- Use [`loki.source.file`](https://grafana.com/docs/alloy/latest/reference/components/loki/loki.source.file/) to read log files
 - Use [`loki.process`](https://grafana.com/docs/alloy/latest/reference/components/loki/loki.process/) to parse JSON and extract labels
 - Use [`loki.write`](https://grafana.com/docs/alloy/latest/reference/components/loki/loki.write/) to send logs to Loki
 
@@ -264,7 +264,7 @@ Mission-control generates operational logs: JSON-formatted records of everything
 These logs are written to files inside the container, but no one's reading them. Without a pipeline to collect and ship them, you're missing critical intel.
 
 **Your task:** 
-Build a log pipeline to tail mission-control's log files, parse the JSON, and send them to Loki.
+Build a log pipeline to read mission-control's log files, parse the JSON, and send them to Loki.
 
 Once it's configured, you'll see logs flowing into Grafana where you can search and filter by component.
 
