@@ -150,7 +150,7 @@ otelcol.receiver.otlp "default" {
   }
 // OpenTelemetry components use `output` to send data and `.input` to receive it:
   output {
-    traces = [TODO]  // Forward to the batch processor's input
+    traces = [TODO]  // Forward to the batch processor's input hint: component_type.label.input
   }
 }
 
