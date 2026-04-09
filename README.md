@@ -168,6 +168,7 @@ otelcol.processor.batch "default" {
 
 
 // Step 3: Export traces to Tempo
+
 otelcol.exporter.otlphttp "docker_tempo" {
   client {
     endpoint = "TODO"  // Send to http://tempo:4318
@@ -514,6 +515,7 @@ prometheus.relabel “standardize_agent_labels” {
     action = “labeldrop”
     regex  = “^TODO$”
   }
+
   forward_to = [TODO]  // Forward to prometheus.remote_write receiver
 }
 
