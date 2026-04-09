@@ -118,7 +118,7 @@ prometheus.scrape "mission_control" {
   scrape_interval = "5s"
 
   targets    = [{"__address__" = "mission-control:8080"}]
-  forward_to = [prometheus.relabel.normalize_agent_labels.receiver]
+  forward_to = [prometheus.relabel.standardize_agent_labels.receiver]
 }
 
 /*
@@ -132,7 +132,7 @@ prometheus.scrape "mission_control" {
   regex = "(.+)" matches only when the label is present and non-empty,
   so the rules are safe no-ops for metrics that already use the right names.
 */
-prometheus.relabel "normalize_agent_labels" {
+prometheus.relabel "standardize_agent_labels" {
   // id → agent_id
   rule {
     action        = "replace"

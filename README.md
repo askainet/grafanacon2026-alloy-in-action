@@ -423,7 +423,7 @@ Without that label, you'd have to search the entire log body to filter by compon
 ### Objectives
 
 - Use [`prometheus.scrape`](https://grafana.com/docs/alloy/latest/reference/components/prometheus/prometheus.scrape/) to scrape metrics from the application
-- Use [`prometheus.relabel`](https://grafana.com/docs/alloy/latest/reference/components/prometheus/prometheus.relabel/) to normalize label names for consistency
+- Use [`prometheus.relabel`](https://grafana.com/docs/alloy/latest/reference/components/prometheus/prometheus.relabel/) to standardize label names for consistency
 - Use [`prometheus.remote_write`](https://grafana.com/docs/alloy/latest/reference/components/prometheus/prometheus.remote_write/) to export metrics to Mimir
 
 ### Scenario
@@ -433,7 +433,7 @@ You're the operations team responsible for monitoring field agents deployed arou
 Those check-ins are captured as metrics. The `mission-control` app exposes them at `/metrics`, but right now nothing is collecting them.
 
 **Your task:** 
-Build a metrics pipeline to scrape mission-control, normalize the labels, and send them to Mimir.
+Build a metrics pipeline to scrape mission-control, standardize the labels, and send them to Mimir.
 
 Once it's configured, you'll see a world map showing agent locations, grouped by country.
 
@@ -441,7 +441,7 @@ Once it's configured, you'll see a world map showing agent locations, grouped by
 
 Two metrics track your agents: `active_agents` tells you who's currently online, and `agent_comms_total` counts their check-ins. Together, they paint a picture of field activity.
 
-But these metrics label the same data differently. `active_agents` uses `agent_id` and `country_code`, while `agent_comms_total` uses `id` and `region`. This makes it harder to correlate metrics later. You'll use `prometheus.relabel` to normalize them.
+But these metrics label the same data differently. `active_agents` uses `agent_id` and `country_code`, while `agent_comms_total` uses `id` and `region`. This makes it harder to correlate metrics later. You'll use `prometheus.relabel` to standardize them.
 
 ### Build the Pipeline
 
@@ -469,50 +469,50 @@ prometheus.scrape "mission_control" {
   scrape_timeout  = "4s"
 
   targets    = [{"__address__" = "mission-control:8080"}]
-  forward_to = [TODO]  // Forward to prometheus.relabel.normalize_agent_labels receiver
+  forward_to = [TODO]  // Forward to prometheus.relabel.standardize_agent_labels receiver
 }
 
-// Step 2: Normalize label names
+// Step 2: Standardize label names
 
 /*
-  Normalize labels so all agent metrics use consistent naming
+  Standardize labels so all agent metrics use consistent naming
 
   Before:
-    active_agents{agent_id="ALPHA-007", country_code="US"}
-    agent_comms_total{id="ALPHA-007", region="US"}
+    active_agents{agent_id=”ALPHA-007”, country_code=”US”}
+    agent_comms_total{id=”ALPHA-007”, region=”US”}
 
   After:
-    active_agents{agent_id="ALPHA-007", country_code="US"}
-    agent_comms_total{agent_id="ALPHA-007", country_code="US"}
+    active_agents{agent_id=”ALPHA-007”, country_code=”US”}
+    agent_comms_total{agent_id=”ALPHA-007”, country_code=”US”}
 
   Rename: id → agent_id, region → country_code
 */
 
-prometheus.relabel "normalize_agent_labels" {
+prometheus.relabel “standardize_agent_labels” {
   rule {
-    action        = "replace"
-    source_labels = ["id"]
-    regex         = "(.+)"
-    target_label  = "agent_id"
+    action        = “replace”
+    source_labels = [“id”]
+    regex         = “(.+)”
+    target_label  = “agent_id”
   }
 
   rule {
-    action = "labeldrop"
-    regex  = "^id$"
+    action = “labeldrop”
+    regex  = “^id$”
   }
 
  // We’ll do the same with the “region” label to rename it to “country_code” and drop the old label
 
   rule {
-    action        = "replace"
-    source_labels = ["TODO"]
-    regex         = "(.+)"
-    target_label  = "TODO"
+    action        = “replace”
+    source_labels = [“TODO”]
+    regex         = “(.+)”
+    target_label  = “TODO”
   }
 
   rule {
-    action = "labeldrop"
-    regex  = "^TODO$"
+    action = “labeldrop”
+    regex  = “^TODO$”
   }
   forward_to = [TODO]  // Forward to prometheus.remote_write receiver
 }
@@ -526,7 +526,7 @@ prometheus.remote_write "docker_mimir" {
 
 ```
 
-// Step 2: Normalize label names
+// Step 2: Standardize label names
 
 <details>
 <summary>Full solution</summary>
@@ -543,13 +543,13 @@ prometheus.scrape "mission_control" {
   scrape_timeout  = "4s"
 
   targets    = [{"__address__" = "mission-control:8080"}]
-  forward_to = [prometheus.relabel.normalize_agent_labels.receiver]
+  forward_to = [prometheus.relabel.standardize_agent_labels.receiver]
 }
 
-// Step 2: Normalize label names
+// Step 2: Standardize label names
 
 /*
-  Normalize labels so all agent metrics use consistent naming
+  Standardize labels so all agent metrics use consistent naming
 
   Before:
     active_agents{agent_id="ALPHA-007", country_code="US"}
@@ -562,7 +562,7 @@ prometheus.scrape "mission_control" {
   Rename: id → agent_id, region → country_code
 */
 
-prometheus.relabel "normalize_agent_labels" {
+prometheus.relabel "standardize_agent_labels" {
   rule {
     action        = "replace"
     source_labels = ["id"]
@@ -675,7 +675,7 @@ An adversary discovered that our server records the full request path as a metri
 
 ### Starter Code
 
-Add these components to your `config.alloy` and fill in the TODOs. You'll also need to update `normalize_agent_labels`'s `forward_to` to route through the new relabel component instead of going directly to `remote_write`.
+Add these components to your `config.alloy` and fill in the TODOs. You'll also need to update `standardize_agent_labels`'s `forward_to` to route through the new relabel component instead of going directly to `remote_write`.
 
 ```alloy
 // Step 1: Fetch the allowlist of legitimate paths
@@ -694,7 +694,7 @@ prometheus.relabel "mission1" {
   forward_to = [prometheus.remote_write.docker_mimir.receiver]
 }
 
-// Step 3: Update normalize_agent_labels forward_to:
+// Step 3: Update standardize_agent_labels forward_to:
 // Before: forward_to = [prometheus.remote_write.docker_mimir.receiver]
 // After:  forward_to = [prometheus.relabel.mission1.receiver]
 ```
