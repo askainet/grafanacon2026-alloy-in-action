@@ -479,41 +479,41 @@ prometheus.scrape "mission_control" {
   Standardize labels so all agent metrics use consistent naming
 
   Before:
-    active_agents{agent_id=”ALPHA-007”, country_code=”US”}
-    agent_comms_total{id=”ALPHA-007”, region=”US”}
+    active_agents{agent_id="ALPHA-007", country_code="US"}
+    agent_comms_total{id="ALPHA-007", region="US"}
 
   After:
-    active_agents{agent_id=”ALPHA-007”, country_code=”US”}
-    agent_comms_total{agent_id=”ALPHA-007”, country_code=”US”}
+    active_agents{agent_id="ALPHA-007", country_code="US"}
+    agent_comms_total{agent_id="ALPHA-007", country_code="US"}
 
-  Rename: id → agent_id, region → country_code
+  Rename: id -> agent_id, region -> country_code
 */
 
-prometheus.relabel “standardize_agent_labels” {
+prometheus.relabel "standardize_agent_labels" {
   rule {
-    action        = “replace”
-    source_labels = [“id”]
-    regex         = “(.+)”
-    target_label  = “agent_id”
+    action        = "replace"
+    source_labels = ["id"]
+    regex         = "(.+)"
+    target_label  = "agent_id"
   }
 
   rule {
-    action = “labeldrop”
-    regex  = “^id$”
+    action = "labeldrop"
+    regex  = "^id$"
   }
 
- // We’ll do the same with the “region” label to rename it to “country_code” and drop the old label
+  // We'll do the same with the "region" label to rename it to "country_code" and drop the old label
 
   rule {
-    action        = “replace”
-    source_labels = [“TODO”]
-    regex         = “(.+)”
-    target_label  = “TODO”
+    action        = "replace"
+    source_labels = ["TODO"]
+    regex         = "(.+)"
+    target_label  = "TODO"
   }
 
   rule {
-    action = “labeldrop”
-    regex  = “^TODO$”
+    action = "labeldrop"
+    regex  = "^TODO$"
   }
 
   forward_to = [TODO]  // Forward to prometheus.remote_write receiver
@@ -527,8 +527,6 @@ prometheus.remote_write "docker_mimir" {
 }
 
 ```
-
-// Step 2: Standardize label names
 
 <details>
 <summary>Full solution</summary>
