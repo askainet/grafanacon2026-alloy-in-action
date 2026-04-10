@@ -647,11 +647,11 @@ When we click on the Live Debugging view, we will be able to see a real-time str
 <img width="2509" height="1411" alt="image" src="https://github.com/user-attachments/assets/ae97f9a3-574a-4d15-a67c-5667e2dbca40" />
 
 Navigate to the ‘Graph’ tab to access the graph of components and how they are connected.
-<img width="2506" height="1409" alt="image" src="https://github.com/user-attachments/assets/e0960d65-efcc-43b3-9681-2cdd83a8ad62" />
+<img width="2512" height="1410" alt="image" src="https://github.com/user-attachments/assets/78ec39b1-1413-4d16-ab72-6a682d199bb2" />
 
-The number (pink box) shown on the dotted lines shows the rate of transfer between components. The window at the top (orange box) configures the interval over which alloy should calculate the per-second rate, so a window of ‘10’ means that alloy should look over the last 10 seconds to compute the rate.
+The number (pink box) shown on the dotted lines shows the rate of transfer between components. The window at the top (pink box) configures the interval over which alloy should calculate the per-second rate, so a window of ‘5’ means that alloy should look over the last 5 seconds to compute the rate.
 
-The color of the dotted line signifies what type of data are being transferred between components. See the color key (purple box) for clarification. 
+The color of the dotted line signifies what type of data are being transferred between components. See the color key (green box) for clarification. 
 
 **To debug the piplines using the Alloy UI**
 - Ensure that no component is reported as unhealthy.
