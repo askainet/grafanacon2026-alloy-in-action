@@ -409,7 +409,9 @@ Next, open Explore from the Grafana sidebar.
 Explore is Grafana's query playground. It lets you run ad-hoc queries without building a dashboard.
 
 Select Loki as the data source and try this query:
+```
 {component="agents"}
+```
 
 You should see logs filtered to just field agent activity. 
 <img width="2509" height="1405" alt="image" src="https://github.com/user-attachments/assets/ce5b5337-78da-4eb1-b17e-0859435b046b" />
@@ -465,6 +467,7 @@ Add this to your `config.alloy` file (below your logs pipeline) and fill in the 
 */
 
 // Step 1: Scrape metrics from mission-control
+
 prometheus.scrape "mission_control" {
   scrape_interval = "5s"
   scrape_timeout  = "4s"
@@ -520,6 +523,7 @@ prometheus.relabel "standardize_agent_labels" {
 }
 
 // Step 3: Send metrics to Mimir
+
 prometheus.remote_write "docker_mimir" {
   endpoint {
     url = "http://mimir:9009/api/v1/push"
