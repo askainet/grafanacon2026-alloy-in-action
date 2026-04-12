@@ -435,8 +435,7 @@ Without that label, you'd have to search the entire log body to filter by compon
 The `mission-control` application exposes a set of metrics in Prometheus format, accessible at the standard `/metrics` endpoint. Among those metrics are agent check-ins, used to track 
 which field operatives are active and where they're located.
 
-**Your task:** 
-
+**Your task:**
 Build a metrics pipeline to scrape `mission-control`, standardize the labels, and send them to Mimir.
 
 Once it's configured, you'll see a world map showing agent locations, grouped by country.
@@ -676,7 +675,8 @@ make mission1
 
 An adversary discovered that our server records the full request path as a metric label. They're now flooding us with requests to thousands of random URLs — paths like `/api/a3f8c2e1` that don't map to any real endpoint. Every unique path creates a new time series in Mimir, and cardinality is climbing fast.
 
-**Your orders:** Using what you learned in Foundation III, fetch the list of legitimate paths with `remote.http` from `http://mission-control:8080/api/metrics/allowed-paths`, then use `prometheus.relabel` with a `keep` action on the `path` label to filter out the garbage. Only real routes should make it through to Mimir. The [Alloy standard library](https://grafana.com/docs/alloy/latest/reference/stdlib/) functions may be helpful here!
+**Your orders:**
+Using what you learned in Foundation III, fetch the list of legitimate paths with `remote.http` from `http://mission-control:8080/api/metrics/allowed-paths`, then use `prometheus.relabel` with a `keep` action on the `path` label to filter out the garbage. Only real routes should make it through to Mimir. The [Alloy standard library](https://grafana.com/docs/alloy/latest/reference/stdlib/) functions may be helpful here!
 
 <img width="2504" height="1407" alt="image" src="https://github.com/user-attachments/assets/6e3da07a-2b2f-47d8-b673-0bd6a0636860" />
 
@@ -747,7 +747,8 @@ make mission2
 
 After the last incident, the higher-ups want us to collect the DEBUG logs we were previously dropping. It turns out those include request logs that could have helped us track down the attacker. But pumping everything into Loki would blow the budget. The directive: archive _all_ logs to a new S3 bucket named `audit-logs`, but only send `INFO`/`WARN`/`ERROR` logs to Loki for fast queries.
 
-**Your orders:** The skills you picked up in Foundation II will come in handy here. Split your log pipeline into two parallel paths:
+**Your orders:**
+The skills you picked up in Foundation II will come in handy here. Split your log pipeline into two parallel paths:
 1. **All logs** -> S3 via `otelcol.receiver.loki` -> `otelcol.processor.batch` -> `otelcol.exporter.awss3`
 2. **Non-DEBUG only** -> Loki via a second `loki.process` and using a `stage.drop` to drop any `DEBUG` logs
 
@@ -862,7 +863,8 @@ make mission3
 
 We need to keep our network traffic to a minimum to maintain a low profile. Right now we're sending every single trace to Tempo, and that kind of volume is going to attract attention.
 
-**Your orders:** Go back to the pipeline you built in Foundation I and add head sampling to cut the volume down. Insert an `otelcol.processor.probabilistic_sampler` component between the OTLP receiver and batch processor. Set `sampling_percentage = 5.0` to keep only 5% of traces. While you're at it, think about what we're trading away here. What intelligence might slip through the cracks?
+**Your orders:**
+Go back to the pipeline you built in Foundation I and add head sampling to cut the volume down. Insert an `otelcol.processor.probabilistic_sampler` component between the OTLP receiver and batch processor. Set `sampling_percentage = 5.0` to keep only 5% of traces. While you're at it, think about what we're trading away here. What intelligence might slip through the cracks?
 <img width="2502" height="1405" alt="image" src="https://github.com/user-attachments/assets/ba811483-6c22-4aec-b5cf-b4ab7700b85a" />
 
 ### Starter Code
@@ -910,7 +912,8 @@ make mission4
 
 A field agent has sent us an encrypted dead drop and is transmitting the decryption key in fragments through span attributes on error traces. One piece every 15 seconds, five pieces total. With Head Sampling it will take too long to assemble the key.
 
-**Your orders:** Swap out the head sampler for `otelcol.processor.tail_sampling`. Configure two policies:
+**Your orders:**
+Swap out the head sampler for `otelcol.processor.tail_sampling`. Configure two policies:
 1. `status_code` policy: keep all error traces (every fragment counts)
 2. `probabilistic` policy: sample 5% of everything else
 
