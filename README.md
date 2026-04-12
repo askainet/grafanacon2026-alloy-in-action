@@ -117,7 +117,7 @@ Right now, those traces are being generated but going nowhere. Without a pipelin
 **Your task:** 
 Build a trace pipeline so you can see what's happening inside mission-control.
 
-Once it's configured, you'll be able to view traces in Grafana dashboard and drill into individual operations.
+Once it's configured, you'll be able to view traces in the Mission Control Grafana dashboard and drill into individual operations.
 
 ### Build the Pipeline
 
@@ -235,15 +235,13 @@ config reloaded
 
 ### Verify Your Work
 
-1. Open **Grafana** at http://localhost:3000
-2. Go to the dashboard **Mission Control Overview** dashboard. 
-<img width="2502" height="1407" alt="image" src="https://github.com/user-attachments/assets/000ff34f-3869-4744-a604-211f84587f90" />
+1. Go to the dashboard [**Mission Control Overview** dashboard](http://localhost:3000/d/mission-control-overview/mission-control-overview). 
 
 The Traces panel at the bottom should now show data.
 
 <img width="2512" height="1411" alt="image" src="https://github.com/user-attachments/assets/33dc061c-b87f-4c77-b4d5-4947509d5f65" />
 
-3. When you click on one of the traces, you can see the full breakdown of what happened and how long it took.
+2. When you click on one of the traces, you can see the full breakdown of what happened and how long it took.
 
 <img width="2511" height="1414" alt="image" src="https://github.com/user-attachments/assets/21b3c77c-c918-4e77-bb7f-b7969da3485a" />
 
@@ -260,9 +258,12 @@ The Traces panel at the bottom should now show data.
 
 ### Scenario
 
-Mission-control generates operational logs: JSON-formatted records of everything happening in the system. Agent check-ins, status updates, internal events. It's all there.
+Mission-control generates operational logs: JSON-formatted records of everything happening in the system. Agent check-ins, status updates, and internal events.
 
 These logs are written to files inside the container, but no one's reading them. Without a pipeline to collect and ship them, you're missing critical intel.
+
+The environment is set up to mimic a scenario where Alloy is running on and has access to the machine's filesystem (a Daemonset in Kubernetes or simply an Alloy
+collector running on each VM).
 
 **Your task:** 
 Build a log pipeline to read mission-control's log files, parse the JSON, and send them to Loki.
@@ -276,8 +277,8 @@ Once it's configured, you'll see logs flowing into Grafana where you can search 
 `local.file_match` → `loki.source.file` → `loki.process` → `loki.write`
 
 - Match log files at `/var/log/alloy/*.log`
-- Read log files and forward log lines
-- Parse JSON and extract the `component` field as a label
+- Read log files and forward log lines for processing
+- Parse JSON and extract the `component` field and add it as a label
 - Write to Loki at `http://loki:3100/loki/api/v1/push`
 
 ### Starter Code
@@ -400,7 +401,7 @@ config reloaded
 
 ### Verify Your Work
 
-Check the **Mission Control Overview** dashboard. The logs panel should now show data.
+Check the [**Mission Control Overview** dashboard](http://localhost:3000/d/mission-control-overview/mission-control-overview). The logs panel should now show data.
 
 <img width="2507" height="1407" alt="image" src="https://github.com/user-attachments/assets/3f1eb1ba-987b-4418-822c-b8210c408bc1" />
 
@@ -415,7 +416,7 @@ Select Loki as the data source and try this query:
 
 You should see logs filtered to just field agent activity. 
 <img width="2509" height="1405" alt="image" src="https://github.com/user-attachments/assets/ce5b5337-78da-4eb1-b17e-0859435b046b" />
-Check Common labels at the top. It shows component=agents. That's the label we extracted from the JSON.
+Check `Common labels` at the top. It shows `component=agents`. That's the label we extracted from the JSON.
 
 Without that label, you'd have to search the entire log body to filter by component. With it, you can filter instantly.
 
@@ -431,12 +432,12 @@ Without that label, you'd have to search the entire log body to filter by compon
 
 ### Scenario
 
-You're the operations team responsible for monitoring field agents deployed around the world. Your agents check in regularly, and you need to track who's active and where they're located.
-
-Those check-ins are captured as metrics. The `mission-control` app exposes them at `/metrics`, but right now nothing is collecting them.
+The `mission-control` application exposes a set of metrics in Prometheus format, accessible at the standard `/metrics` endpoint. Among those metrics are agent check-ins, used to track 
+which field operatives are active and where they're located.
 
 **Your task:** 
-Build a metrics pipeline to scrape mission-control, standardize the labels, and send them to Mimir.
+
+Build a metrics pipeline to scrape `mission-control`, standardize the labels, and send them to Mimir.
 
 Once it's configured, you'll see a world map showing agent locations, grouped by country.
 
@@ -445,6 +446,8 @@ Once it's configured, you'll see a world map showing agent locations, grouped by
 Two metrics track your agents: `active_agents` tells you who's currently online, and `agent_comms_total` counts their check-ins. Together, they paint a picture of field activity.
 
 But these metrics label the same data differently. `active_agents` uses `agent_id` and `country_code`, while `agent_comms_total` uses `id` and `region`. This makes it harder to correlate metrics later. You'll use `prometheus.relabel` to standardize them.
+
+This kind of inconsistency is common as organizations grow and teams or departments develop different observability practices. Luckily, it's all solvable at the collector level!
 
 ### Build the Pipeline
 
@@ -619,22 +622,22 @@ config reloaded
 
 ### Verify Your Work
 
-Check the **Mission Control Overview** dashboard and view the Active Agents panel. 
+Check the [**Mission Control Overview** dashboard](http://localhost:3000/d/mission-control-overview/mission-control-overview) and view the Active Agents panel. 
 <img width="2508" height="1409" alt="image" src="https://github.com/user-attachments/assets/6088be81-95ea-427a-8f0d-2d2ff41b7660" />
 
 To verify your relabel rules are working, go to Explore, select Mimir as a data source and run this query:
 ```
 agent_comms_total{agent_id=~".+"}
 ```
-You should see that agent_comms_total now has agent_id and country_code labels (purple box). That confirms that our relabeling rules worked. 
+You should see that `agent_comms_total` metric now has `agent_id` and `country_code` labels (purple box). That confirms that our relabeling rules worked. 
 <img width="2506" height="1410" alt="image" src="https://github.com/user-attachments/assets/5fd78140-ef2a-4763-9058-67063bf62205" />
 
 
 ### How to use the Alloy UI to debug pipelines
 
-Alloy UI is a useful tool that helps you visualize how Alloy is configured and what it is doing so you are able to debug efficiently. 
+Alloy's UI is a useful tool that helps you visualize how Alloy is configured and what it is doing so you are able to debug efficiently. 
 
-Navigate to `localhost:12347` to see the list of components (orange box) that alloy is currently configured with.
+Navigate to [localhost:12347](http://localhost:12347) to see the list of components (orange box) that alloy is currently configured with.
 Click on the blue ‘view’ button on the right side (red arrow).
 <img width="2506" height="1402" alt="image" src="https://github.com/user-attachments/assets/3d2c591c-2519-4aed-8f8b-7072b7a0dd91" />
 
@@ -643,20 +646,20 @@ This page shows us the health of the component, the arguments it's using, and it
 This page also gives us quick access to the component’s documentation (orange arrow) and a Live Debugging view (yellow arrow). 
 <img width="2501" height="1407" alt="image" src="https://github.com/user-attachments/assets/9ce8d733-7f14-4686-b128-248f2a0faa37" />
 
-When we click on the Live Debugging view, we will be able to see a real-time stream of telemetry flowing through a component.
+When we click on the `Live Debugging` view, we will be able to see a real-time stream of telemetry flowing through a component.
 <img width="2509" height="1411" alt="image" src="https://github.com/user-attachments/assets/ae97f9a3-574a-4d15-a67c-5667e2dbca40" />
 
-Navigate to the ‘Graph’ tab to access the graph of components and how they are connected.
+Navigate to the `Graph` tab to access the graph of components and how they are connected.
 <img width="2512" height="1410" alt="image" src="https://github.com/user-attachments/assets/78ec39b1-1413-4d16-ab72-6a682d199bb2" />
 
-The number (pink box) shown on the dotted lines shows the rate of transfer between components. The window at the top (pink box) configures the interval over which alloy should calculate the per-second rate, so a window of ‘5’ means that alloy should look over the last 5 seconds to compute the rate.
+The number (pink box) shown on the dotted lines shows the rate of transfer between components. The window at the top (pink box) configures the interval over which Alloy should calculate the per-second rate, so a window of ‘5’ means that Alloy should look over the last 5 seconds to compute the rate.
 
 The color of the dotted line signifies what type of data are being transferred between components. See the color key (green box) for clarification. 
 
 **To debug the piplines using the Alloy UI**
 - Ensure that no component is reported as unhealthy.
 - Ensure that the arguments and exports for misbehaving components appear correct.
-- Ensure that the live debugging data meets your expectations.
+- Use live debugging to verify the data is what you expect.
 
 # BREAK
 
@@ -673,7 +676,7 @@ make mission1
 
 An adversary discovered that our server records the full request path as a metric label. They're now flooding us with requests to thousands of random URLs — paths like `/api/a3f8c2e1` that don't map to any real endpoint. Every unique path creates a new time series in Mimir, and cardinality is climbing fast.
 
-**Your orders:** Using what you learned in Foundation III, fetch the list of legitimate paths with `remote.http` from `http://mission-control:8080/api/metrics/allowed-paths`, then use `prometheus.relabel` with a `keep` action on the `path` label to filter out the garbage. Only real routes should make it through to Mimir.
+**Your orders:** Using what you learned in Foundation III, fetch the list of legitimate paths with `remote.http` from `http://mission-control:8080/api/metrics/allowed-paths`, then use `prometheus.relabel` with a `keep` action on the `path` label to filter out the garbage. Only real routes should make it through to Mimir. The [Alloy standard library](https://grafana.com/docs/alloy/latest/reference/stdlib/) functions may be helpful here!
 
 <img width="2504" height="1407" alt="image" src="https://github.com/user-attachments/assets/6e3da07a-2b2f-47d8-b673-0bd6a0636860" />
 
@@ -682,6 +685,10 @@ An adversary discovered that our server records the full request path as a metri
 Add these components to your `config.alloy` and fill in the TODOs. You'll also need to update `standardize_agent_labels`'s `forward_to` to route through the new relabel component instead of going directly to `remote_write`.
 
 ```alloy
+/* 
+Mission 1: Cardinality
+
+*/
 // Step 1: Fetch the allowlist of legitimate paths
 remote.http "allowed_paths_regex" {
   url = "http://mission-control:8080/api/metrics/allowed-paths"
@@ -737,11 +744,11 @@ make mission2
 ```
 <img width="2509" height="1410" alt="image" src="https://github.com/user-attachments/assets/001ea468-26d0-46b2-bca2-4d94fd96c680" />
 
-After the last incident, the higher-ups want us collecting the DEBUG logs we were previously dropping. Turns out those include request logs that could have helped us track down the attacker. But pumping everything into Loki would blow the budget. The directive: archive all logs to S3 for auditing, but only send `INFO`/`WARN`/`ERROR` to Loki for fast queries.
+After the last incident, the higher-ups want us to collect the DEBUG logs we were previously dropping. It turns out those include request logs that could have helped us track down the attacker. But pumping everything into Loki would blow the budget. The directive: archive _all_ logs to a new S3 bucket named `audit-logs`, but only send `INFO`/`WARN`/`ERROR` logs to Loki for fast queries.
 
 **Your orders:** The skills you picked up in Foundation II will come in handy here. Split your log pipeline into two parallel paths:
 1. **All logs** -> S3 via `otelcol.receiver.loki` -> `otelcol.processor.batch` -> `otelcol.exporter.awss3`
-2. **Non-DEBUG only** -> Loki via a second `loki.process` with `stage.drop`
+2. **Non-DEBUG only** -> Loki via a second `loki.process` and using a `stage.drop` to drop any `DEBUG` logs
 
 <img width="2511" height="1411" alt="image" src="https://github.com/user-attachments/assets/ce6e21b3-4c1e-41db-b9ed-a1450fef230a" />
 
@@ -813,7 +820,7 @@ loki.process "filter_debug" {
 <details>
 <summary>Hint 1: wiring the fan-out</summary>
 
-Loki and OTLP components use the same `.receiver` pattern you've already seen with Prometheus. `otelcol.receiver.loki` exposes a `.receiver` export that accepts Loki log entries.
+`otelcol.receiver.loki` exposes a `.receiver` export that accepts Loki log entries.
 
 </details>
 
@@ -827,7 +834,8 @@ Check the [`loki.process` docs](https://grafana.com/docs/alloy/latest/reference/
 <details>
 <summary>Hint 3: stage details</summary>
 
-The stage takes `source` (the extracted field to compare) and `value` (the string to match against).
+The stage can take a `source` (the extracted field to compare) and `value` (the string to match against) to directly compare the value. You can also perform more complex matching,
+but we only need `source` and `value` for this Mission.
 
 </details>
 
@@ -846,7 +854,7 @@ make mission3
 
 We need to keep our network traffic to a minimum to maintain a low profile. Right now we're sending every single trace to Tempo, and that kind of volume is going to attract attention.
 
-**Your orders:** Go back to the pipeline you built in Foundation I and add head sampling to cut the volume down. Insert `otelcol.processor.probabilistic_sampler` between the OTLP receiver and batch processor. Set `sampling_percentage = 5.0` to keep only 5% of traces. While you're at it, think about what we're trading away here. What intelligence might slip through the cracks?
+**Your orders:** Go back to the pipeline you built in Foundation I and add head sampling to cut the volume down. Insert an `otelcol.processor.probabilistic_sampler` component between the OTLP receiver and batch processor. Set `sampling_percentage = 5.0` to keep only 5% of traces. While you're at it, think about what we're trading away here. What intelligence might slip through the cracks?
 <img width="2502" height="1405" alt="image" src="https://github.com/user-attachments/assets/ba811483-6c22-4aec-b5cf-b4ab7700b85a" />
 
 ### Starter Code
@@ -887,7 +895,7 @@ make mission4
 ```
 <img width="2510" height="1410" alt="image" src="https://github.com/user-attachments/assets/54db1bff-6bab-4403-b7ae-52e7ea1b3078" />
 
-A field agent has sent us an encrypted dead drop and is transmitting the decryption key in fragments through span attributes on error traces. One piece every 15 seconds, five pieces total. Head sampling would toss most of them before we ever get the chance to reassemble the key.
+A field agent has sent us an encrypted dead drop and is transmitting the decryption key in fragments through span attributes on error traces. One piece every 15 seconds, five pieces total. With Head Sampling it will take too long to assemble the key.
 
 **Your orders:** Swap out the head sampler for `otelcol.processor.tail_sampling`. Configure two policies:
 1. `status_code` policy: keep all error traces (every fragment counts)
@@ -909,6 +917,12 @@ Replace `otelcol.processor.probabilistic_sampler.mission3` with this component a
 // Update otelcol.receiver.otlp "default" output:
 // Before: traces = [otelcol.processor.probabilistic_sampler.mission3.input]
 // After:  traces = [TODO]
+
+/* 
+
+Mission IV: Leave No (Error) Trace
+Pipeline: 
+*/
 
 otelcol.processor.tail_sampling "mission4" {
   decision_wait = "10s"
