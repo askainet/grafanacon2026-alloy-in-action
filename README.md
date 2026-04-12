@@ -251,8 +251,7 @@ The Traces panel at the bottom should now show data.
 
 <img width="2503" height="1409" alt="image" src="https://github.com/user-attachments/assets/d5f91a67-44db-4b4a-8bcb-b0c459cb8e85" />
 
-- Use [`local.file_match`](https://grafana.com/docs/alloy/latest/reference/components/local/local.file_match/) to discover log files
-- Use [`loki.source.file`](https://grafana.com/docs/alloy/latest/reference/components/loki/loki.source.file/) to read log files
+- Use [`loki.source.file`](https://grafana.com/docs/alloy/latest/reference/components/loki/loki.source.file/) to discover and read log files
 - Use [`loki.process`](https://grafana.com/docs/alloy/latest/reference/components/loki/loki.process/) to parse JSON and extract labels
 - Use [`loki.write`](https://grafana.com/docs/alloy/latest/reference/components/loki/loki.write/) to send logs to Loki
 
@@ -274,10 +273,9 @@ Once it's configured, you'll see logs flowing into Grafana where you can search 
 
 **Pipeline:** 
 
-`local.file_match` → `loki.source.file` → `loki.process` → `loki.write`
+`loki.source.file` → `loki.process` → `loki.write`
 
-- Match log files at `/var/log/alloy/*.log`
-- Read log files and forward log lines for processing
+- Discover and read log files at `/var/log/alloy/*.log`
 - Parse JSON and extract the `component` field and add it as a label
 - Write to Loki at `http://loki:3100/loki/api/v1/push`
 
@@ -288,24 +286,20 @@ Add this to your `config.alloy` file (below your traces pipeline) and fill in th
 ```alloy
 /*
   Foundation 2: Logs Pipeline
-  Pipeline: local.file_match -> loki.source.file -> loki.process -> loki.write
+  Pipeline: loki.source.file -> loki.process -> loki.write
 */
-
-// Step 1: Find log files to read
-
-local.file_match "mission_control" {
-  path_targets = [{"__path__" = "/var/log/alloy/*.log"}]
-}
-
-// Step 2: Read the log files
+// Step 1: Discover and read files
 
 loki.source.file "mission_control" {
-  targets    = TODO  // hint: component_type.label.targets
+  targets    = [{"__path__" = "/var/log/alloy/*.log"}]
+
+  // TODO: We need to add a file_match block with an argument `enabled = true`
+
   forward_to = [TODO]  // Forward to loki.process receiver
 }
 
 /*
-Step 3: Extract "component" from JSON and promote to label
+Step 2: Extract "component" from JSON and promote to label
 Original log: {"level":"INFO","component":"agents","msg":"Request received"}
 Labels are indexed — makes filtering fast in Grafana
 */
@@ -329,7 +323,7 @@ loki.process "mission_control_logs" {
   forward_to = [TODO]  // Forward to the loki.write receiver
 }
 
-// Step 4: Send logs to Loki
+// Step 3: Send logs to Loki
 
 loki.write "docker_loki" {
   endpoint {
@@ -344,17 +338,17 @@ loki.write "docker_loki" {
 ```alloy
 /*
   Foundation 2: Logs Pipeline
-  Pipeline: local.file_match -> loki.source.file -> loki.process -> loki.write
+  Pipeline: loki.source.file -> loki.process -> loki.write
 */
 
-// Find log files to read
-local.file_match "mission_control" {
-  path_targets = [{"__path__" = "/var/log/alloy/*.log"}]
-}
-
-// Read the log files
+// Discover and read log files
 loki.source.file "mission_control" {
-  targets    = local.file_match.mission_control.targets
+  targets    = [{"__path__" = "/var/log/alloy/*.log"}]
+
+  file_match {
+    enabled = true
+  }
+
   forward_to = [loki.process.mission_control_logs.receiver]
 }
 
@@ -384,6 +378,9 @@ loki.write "docker_loki" {
 ```
 
 </details>
+
+> [!TIP]
+> You can also use [`local.file_match`](https://grafana.com/docs/alloy/latest/reference/components/local/local.file_match/) to perform file discovery — this used to be the only way to do it. However, using the `file_match` block inside `loki.source.file` has less overhead and results in a simpler pipeline.
 
 ### Reloading the Config
 
