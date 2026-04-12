@@ -133,7 +133,7 @@ Once it's configured, you'll be able to view traces in the Mission Control Grafa
 Copy this into your `config.alloy` file and fill in the TODOs:
 ```alloy
 /*
-  Section 1: Traces Pipeline
+  Foundation 1: Traces Pipeline
   Pipeline: otelcol.receiver.otlp -> otelcol.processor.batch -> otelcol.exporter.otlphttp
 */
 
@@ -184,7 +184,7 @@ otelcol.exporter.otlphttp "docker_tempo" {
   
 ```alloy
 /*
-  Section 1: Traces Pipeline
+  Foundation 1: Traces Pipeline
   Pipeline: otelcol.receiver.otlp -> otelcol.processor.batch -> otelcol.exporter.otlphttp
 */
 // Receive OTLP traces from mission-control
@@ -287,7 +287,7 @@ Add this to your `config.alloy` file (below your traces pipeline) and fill in th
 
 ```alloy
 /*
-  Section 2: Logs Pipeline
+  Foundation 2: Logs Pipeline
   Pipeline: local.file_match -> loki.source.file -> loki.process -> loki.write
 */
 
@@ -343,7 +343,7 @@ loki.write "docker_loki" {
 
 ```alloy
 /*
-  Section 2: Logs Pipeline
+  Foundation 2: Logs Pipeline
   Pipeline: local.file_match -> loki.source.file -> loki.process -> loki.write
 */
 
@@ -465,7 +465,7 @@ Add this to your `config.alloy` file (below your logs pipeline) and fill in the 
 
 ```alloy
 /*
-  Section 3: Metrics Pipeline
+  Foundation 3: Metrics Pipeline
   Pipeline: prometheus.scrape -> prometheus.relabel -> prometheus.remote_write
 */
 
@@ -540,7 +540,7 @@ prometheus.remote_write "docker_mimir" {
 
 ```alloy
 /*
-  Section 3: Metrics Pipeline
+  Foundation 3: Metrics Pipeline
   Pipeline: prometheus.scrape -> prometheus.relabel -> prometheus.remote_write
 */
 
@@ -685,10 +685,11 @@ An adversary discovered that our server records the full request path as a metri
 Add these components to your `config.alloy` and fill in the TODOs. You'll also need to update `standardize_agent_labels`'s `forward_to` to route through the new relabel component instead of going directly to `remote_write`.
 
 ```alloy
-/* 
-Mission 1: Cardinality
-
+/*
+  Mission I: Rogue Dimension
+  Pipeline: remote.http -> prometheus.relabel -> prometheus.remote_write
 */
+
 // Step 1: Fetch the allowlist of legitimate paths
 remote.http "allowed_paths_regex" {
   url = "http://mission-control:8080/api/metrics/allowed-paths"
@@ -757,6 +758,13 @@ After the last incident, the higher-ups want us to collect the DEBUG logs we wer
 Extend your existing log pipeline. Update `loki.process.mission_control_logs`'s `forward_to` to fan out to two destinations, then add the components below and fill in the TODOs.
 
 ```alloy
+/*
+  Mission II: Operation Cold Storage
+  Pipeline:
+    Path 1 (all logs): otelcol.receiver.loki -> otelcol.processor.batch -> otelcol.exporter.awss3
+    Path 2 (non-DEBUG): loki.process -> loki.write
+*/
+
 // Step 1: Update loki.process.mission_control_logs forward_to:
 // forward_to = [
 //   TODO,  // all logs -> S3 path
@@ -862,6 +870,11 @@ We need to keep our network traffic to a minimum to maintain a low profile. Righ
 Add this component to your `config.alloy` and fill in the TODOs. You'll also need to update `otelcol.receiver.otlp.default`'s output to route through it.
 
 ```alloy
+/*
+  Mission III: Selective Surveillance
+  Pipeline: otelcol.receiver.otlp -> otelcol.processor.probabilistic_sampler -> otelcol.processor.batch -> otelcol.exporter.otlphttp
+*/
+
 // Update otelcol.receiver.otlp "default" output:
 // Before: traces = [otelcol.processor.batch.default.input]
 // After:  traces = [TODO]
@@ -918,10 +931,9 @@ Replace `otelcol.processor.probabilistic_sampler.mission3` with this component a
 // Before: traces = [otelcol.processor.probabilistic_sampler.mission3.input]
 // After:  traces = [TODO]
 
-/* 
-
-Mission IV: Leave No (Error) Trace
-Pipeline: 
+/*
+  Mission IV: Leave No (Error) Trace
+  Pipeline: otelcol.receiver.otlp -> otelcol.processor.tail_sampling -> otelcol.processor.batch -> otelcol.exporter.otlphttp
 */
 
 otelcol.processor.tail_sampling "mission4" {
