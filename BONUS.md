@@ -140,6 +140,28 @@ Alloy's [`prometheus.enrich`](https://grafana.com/docs/alloy/latest/reference/co
 
 This is useful when your application metrics reference backend services but don't carry infrastructure context — like which team owns the service, what AWS region it runs in, or what instance type it's on. Instead of baking that into every application, you maintain a central service registry and let Alloy enrich metrics at collection time.
 
+```
+  Scraped Metric                                             SD Target
+ ┌────────────────────────┐          compare                ┌───────────────────────────┐
+ │ request_duration{      │ "instance" vs "__address"       │ __address__: "api:8080" ◀── match!
+ │   instance="api:8080"  │───────────────────────────────▶ │ team: "payments"          │
+ │ } 0.5                  │                                 │ region: "us-east-1"       │
+ └────────────────────────┘                                 ├───────────────────────────┤
+                                                            │ ...other targets...       │
+                                                            └───────────────────────────┘
+                                                              │
+                                                              ▼
+                                                    ┌──────────────────────────────────┐
+                                                    │ request_duration{                │
+                                                    │   instance="api:8080",           │
+                                                    │   team="payments",        ◀── copied from SD target labels
+                                                    │   region="us-east-1"      ◀── copied from SD target labels
+                                                    │ } 0.5                            │
+                                                    └──────────────────────────────────┘
+```
+
+`prometheus.enrich` compares the metric's `instance` label (`metrics_match_label`) against each SD target's `__address__` (`target_match_label`). When they match, the specified labels are copied onto the metric. Metrics without a matching label pass through unchanged.
+
 ### Scenario
 
 Mission-control monitors its backend dependencies (Grafana, Loki, Tempo, Mimir) with periodic health checks. These produce two metrics:
