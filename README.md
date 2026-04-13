@@ -1020,7 +1020,7 @@ make deaddrop KEY="..."
 - **Alloy not receiving traces?** Check `docker compose logs alloy` for connection errors
 - **Port conflicts?** Check ports 8080, 3000, 3100, 3200, 4317, 4318, 9009, 12347
 
-## Side Missions
+## Side Missions and expanding your Alloy utility belt
 
 For the enterprising operative, these are extra missions that show some extra things that you
 can accomplish with Alloy.
@@ -1035,6 +1035,8 @@ Alloy has several components that can also be used to debug your telemetry pipel
 - [loki.echo](https://grafana.com/docs/alloy/latest/reference/components/loki/loki.echo/)
 - [prometheus.echo](https://grafana.com/docs/alloy/latest/reference/components/prometheus/prometheus.echo/)
 - [otelcol.processor.debug](https://grafana.com/docs/alloy/latest/reference/components/otelcol/otelcol.exporter.debug/)
+
+You can wire up your pipelines to `forward_to` these components and Alloy will print telemetry to `stdout`!
 
 ### Secret filtering
 
