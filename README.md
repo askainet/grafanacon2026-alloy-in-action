@@ -693,7 +693,7 @@ Using what you learned in the Metrics foundation, fetch the list of legitimate p
 
 ### Starter Code
 
-Add these components to your metrics section (below `standardize_agent_labels`) and fill in the TODOs. Your new relabel stage must sit **before** `remote_write` so only allowed `path` labels reach Mimir.
+Add these components to your metrics section (below `standardize_agent_labels`) and fill in the TODOs. Relabeling must happen **before** `remote_write` so only allowed `path` labels reach Mimir.
 
 ```alloy
 /*
@@ -743,7 +743,7 @@ The response body is JSON. Alloy has a standard library with functions for encod
 <details>
 <summary>Hint 4: pipeline order</summary>
 
-Scraped metrics should flow through your **standardize** relabel block, then through this new `keep` filter, then `remote_write`. If the filter is bypassed, cardinality in Mimir will not improve.
+Scraped metrics should flow through your **standardize** relabel component, then through this new `keep` filter, then `remote_write`. If the filter is bypassed, cardinality in Mimir will not improve.
 
 </details>
 
@@ -940,7 +940,7 @@ make deaddrop KEY="your-token"    # Unlock the dead drop with the assembled toke
 
 ### Starter Code
 
-Remove head sampling from the trace path and add tail sampling instead. Fill in the TODOs. Point the OTLP receiver at this processor, then continue to batch and Tempo as before.
+Remove head sampling from the trace path and add tail sampling instead. Fill in the TODOs. Point the OTLP receiver at this processor, then continue to batch and send to Tempo as before.
 
 ```alloy
 /*
