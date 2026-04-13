@@ -249,7 +249,7 @@ The Traces panel at the bottom should now show data.
 
 ### Objectives
 
-<img width="2503" height="1409" alt="image" src="https://github.com/user-attachments/assets/d5f91a67-44db-4b4a-8bcb-b0c459cb8e85" />
+<img width="1866" height="1048" alt="image" src="https://github.com/user-attachments/assets/4b5e5448-96b4-4935-97d0-ceb86d70c033" />
 
 - Use [`loki.source.file`](https://grafana.com/docs/alloy/latest/reference/components/loki/loki.source.file/) to discover and read log files
 - Use [`loki.process`](https://grafana.com/docs/alloy/latest/reference/components/loki/loki.process/) to parse JSON and extract labels
@@ -380,7 +380,7 @@ loki.write "docker_loki" {
 </details>
 
 > [!TIP]
-> You can also use [`local.file_match`](https://grafana.com/docs/alloy/latest/reference/components/local/local.file_match/) to perform file discovery — this used to be the only way to do it. However, using the `file_match` block inside `loki.source.file` has less overhead and results in a simpler pipeline.
+> You can also use [`local.file_match`](https://grafana.com/docs/alloy/latest/reference/components/local/local.file_match/) to perform file discovery. This used to be the only way to do it. However, using the `file_match` block inside `loki.source.file` has less overhead and results in a simpler pipeline.
 
 ### Reloading the Config
 
