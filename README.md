@@ -1019,3 +1019,83 @@ make deaddrop KEY="..."
 
 - **Alloy not receiving traces?** Check `docker compose logs alloy` for connection errors
 - **Port conflicts?** Check ports 8080, 3000, 3100, 3200, 4317, 4318, 9009, 12347
+
+## Side Missions
+
+For the enterprising operative, these are extra missions that show some extra things that you
+can accomplish with Alloy.
+
+You don't have to, but it's recommended to comment out / move / delete your previous Alloy config
+to reduce log volume for these extra exercises & lessons.
+
+### Extra debugging
+
+Alloy has several components that can also be used to debug your telemetry pipelines.
+
+- [loki.echo](https://grafana.com/docs/alloy/latest/reference/components/loki/loki.echo/)
+- [prometheus.echo](https://grafana.com/docs/alloy/latest/reference/components/prometheus/prometheus.echo/)
+- [otelcol.processor.debug](https://grafana.com/docs/alloy/latest/reference/components/otelcol/otelcol.exporter.debug/)
+
+### Secret filtering
+
+Alloy has a [`loki.secretfilter`](https://grafana.com/docs/alloy/latest/reference/components/loki/loki.secretfilter/) component that processes incoming logs and strips sensitive data like API keys. It uses a [GitLeaks](https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml) config to define what patterns count as secrets.
+
+> [!CAUTION]
+> `loki.secretfilter` may not catch all secrets and should be used as part of a defense-in-depth strategy. You should still avoid logging secrets.
+
+> [!WARNING]
+> `loki.secretfilter` runs regex matching on every log line, which can become a bottleneck in high-throughput pipelines. Keep this in mind when planning production deployments.
+
+`loki.secretfilter` ships with a default gitleaks config, but since it can change between Alloy versions, it's best to construct your own so you have full control over what gets matched. You can add as many `[[rules]]` entries as you need.
+
+This repo includes a custom config at `alloy/gitleaks.toml` with a rule that matches `gcon26_` demo tokens:
+
+```toml
+[[rules]]
+id = "grafanacon-token"
+description = "GrafanaCon 2026 Demo Token"
+regex = '''gcon26_[a-f0-9]{16,}'''
+keywords = ["gcon26_"]
+```
+
+The Alloy config (`alloy/config.alloy`) wires it up as a pipeline that reads a file, filters secrets, and echoes the result:
+
+```alloy
+loki.source.file "secrets" {
+  targets = [{"__path__" = "/etc/alloy/secrets.txt"}]
+  file_match {
+    enabled = true
+  }
+  forward_to = [loki.secretfilter.you_shall_not_pass.receiver]
+}
+
+loki.secretfilter "you_shall_not_pass" {
+  gitleaks_config = "/etc/alloy/gitleaks.toml"
+  redact_with     = "/\\(ಠ_ಠ) |  < YOU SHALL NOT PASS! >"
+  forward_to      = [loki.echo.secrets.receiver]
+}
+
+loki.echo "secrets" { }
+```
+
+#### Try it out
+
+Open two terminals. Run `make alloy-logs` in one to watch Alloy's output.
+
+Reload the config:
+```bash
+make alloy-reload
+```
+
+In the other terminal, append a line with a secret:
+```bash
+echo "gcon26_a1b2c3d4e5f60718" >> ./alloy/secrets.txt
+```
+
+In the Alloy logs terminal, you should see the secret replaced with the redaction string:
+```
+level=info component_path=/ component_id=loki.echo.secrets receiver=loki.echo.secrets entry="/\\(ಠ_ಠ) |  < YOU SHALL NOT PASS! >" ...
+```
+
+Lines that don't match any rule pass through unchanged.
+

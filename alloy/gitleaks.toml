@@ -1,0 +1,7 @@
+title = "GrafanaCon 2026 Alloy Demo - Gitleaks Config"
+
+[[rules]]
+id = "grafanacon-token"
+description = "GrafanaCon 2026 Demo Token"
+regex = '''gcon26_[a-f0-9]{16,}'''
+keywords = ["gcon26_"]
