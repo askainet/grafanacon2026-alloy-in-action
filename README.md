@@ -1101,3 +1101,171 @@ level=info component_path=/ component_id=loki.echo.secrets receiver=loki.echo.se
 
 Lines that don't match any rule pass through unchanged.
 
+### Metric enrichment with service discovery
+
+Alloy has a [`prometheus.enrich`](https://grafana.com/docs/alloy/latest/reference/components/prometheus/prometheus.enrich/) component that enriches metrics with additional labels from service discovery targets. It matches a label from incoming metrics against a label from discovered targets and copies specified labels from the matched target onto the metric.
+
+This is useful when your application metrics reference backend services but don't carry infrastructure context — like which team owns the service, what AWS region it runs in, or what instance type it's on. Instead of baking that into every application, you maintain a central service registry and let Alloy enrich the metrics at collection time.
+
+#### Scenario
+
+Mission-control monitors its backend dependencies (Grafana, Loki, Tempo, Mimir) with periodic health checks. These produce two metrics:
+
+- `backend_health_checks_total{backend="loki:3100"}` — how many checks have been sent
+- `backend_up{backend="loki:3100"}` — whether the backend is reachable (1=up, 0=down)
+
+The `backend` label tells you *what* was checked, but not *who owns it* or *where it runs*. HQ maintains a service registry at `mission-control:8080/api/sd/targets` that returns [Prometheus HTTP SD](https://prometheus.io/docs/prometheus/latest/http_sd/) formatted targets with AWS infrastructure metadata — account IDs, regions, availability zones, VPC IDs, instance types, and team ownership.
+
+**Your task:**
+Use [`discovery.http`](https://grafana.com/docs/alloy/latest/reference/components/discovery/discovery.http/) to fetch the service registry and [`prometheus.enrich`](https://grafana.com/docs/alloy/latest/reference/components/prometheus/prometheus.enrich/) to match the `backend` label on the scraped metrics against the `__address__` label on the SD targets, copying infrastructure metadata onto each metric before sending to Mimir.
+
+**Before enrichment:**
+```
+backend_up{backend="loki:3100"} 1
+```
+
+**After enrichment:**
+```
+backend_up{backend="loki:3100", team="sigint", environment="classified", aws_region="us-east-1", availability_zone="us-east-1b", instance_type="r6g.2xlarge"} 1
+```
+
+#### Build the Pipeline
+
+**Pipeline:**
+
+```
+                      discovery.http
+                            |
+                            v
+prometheus.scrape → prometheus.enrich → prometheus.remote_write
+```
+
+- Scrape metrics from `mission-control:8080` (the backend health check metrics are exposed at `/metrics`)
+- Fetch service discovery targets from `http://mission-control:8080/api/sd/targets`
+- Enrich metrics by matching the metric's `backend` label against the SD target's `__address__` label
+- Copy `team`, `environment`, `aws_region`, `availability_zone`, and `instance_type` onto each matched metric
+- Send enriched metrics to Mimir at `http://mimir:9009/api/v1/push`
+
+#### Starter Code
+
+Add this to your `config.alloy` file and fill in the TODOs:
+
+```alloy
+/*
+  Bonus: Metric Enrichment via Service Discovery
+  Pipeline: prometheus.scrape -> prometheus.enrich -> prometheus.remote_write
+  With:     discovery.http feeding targets into prometheus.enrich
+*/
+
+// Step 1: Fetch infrastructure metadata from the service registry
+discovery.http "lgtm_registry" {
+  url              = "TODO"  // Where is the service registry?
+  refresh_interval = "30s"
+}
+
+// Step 2: Scrape metrics from mission-control (includes backend_up, backend_health_checks_total)
+prometheus.scrape "mission_control" {
+  scrape_interval = "10s"
+  targets         = [{"__address__" = "mission-control:8080"}]
+  forward_to      = [TODO]  // Forward to the enrichment component's receiver
+}
+
+// Step 3: Enrich metrics with infrastructure metadata from the service registry
+prometheus.enrich "infra_metadata" {
+  targets = TODO  // Use the discovery component's .targets export
+
+  // Match the "backend" label on metrics against "__address__" on SD targets
+  target_match_label  = TODO
+  metrics_match_label = TODO
+
+  // Only copy the labels we care about (without this, all SD labels including __address__ would be copied)
+  labels_to_copy = [TODO]
+
+  forward_to = [TODO]  // Forward to remote_write
+}
+
+// Step 4: Send enriched metrics to Mimir
+prometheus.remote_write "docker_mimir" {
+  endpoint {
+    url = "http://mimir:9009/api/v1/push"
+  }
+}
+```
+
+<details>
+<summary>Hint 1: discovery.http exports</summary>
+
+`discovery.http` exposes a `.targets` export: a list of target maps containing `__address__` and all labels from the SD response. Reference it as `discovery.http.lgtm_registry.targets`.
+
+</details>
+
+<details>
+<summary>Hint 2: how matching works</summary>
+
+`prometheus.enrich` compares the value of `metrics_match_label` on each incoming metric against the value of `target_match_label` on each discovered target. When they match, the specified labels are copied onto the metric.
+
+Here, the scraped metric has `backend="loki:3100"` and the SD target has `__address__="loki:3100"`. So `metrics_match_label = "backend"` and `target_match_label = "__address__"`.
+
+Metrics that don't have a `backend` label (like `http_requests_total`) pass through unchanged.
+
+</details>
+
+<details>
+<summary>Full solution</summary>
+
+```alloy
+/*
+  Bonus: Metric Enrichment via Service Discovery
+  Pipeline: prometheus.scrape -> prometheus.enrich -> prometheus.remote_write
+  With:     discovery.http feeding targets into prometheus.enrich
+*/
+
+// Fetch infrastructure metadata from the service registry
+discovery.http "lgtm_registry" {
+  url              = "http://mission-control:8080/api/sd/targets"
+  refresh_interval = "30s"
+}
+
+// Scrape metrics from mission-control (includes backend_up, backend_health_checks_total)
+prometheus.scrape "mission_control" {
+  scrape_interval = "10s"
+  targets         = [{"__address__" = "mission-control:8080"}]
+  forward_to      = [prometheus.enrich.infra_metadata.receiver]
+}
+
+// Enrich metrics with infrastructure metadata from the service registry
+prometheus.enrich "infra_metadata" {
+  targets = discovery.http.lgtm_registry.targets
+
+  target_match_label  = "__address__"
+  metrics_match_label = "backend"
+
+  labels_to_copy = ["team", "environment", "aws_region", "availability_zone", "instance_type"]
+
+  forward_to = [prometheus.remote_write.docker_mimir.receiver]
+}
+
+// Send enriched metrics to Mimir
+prometheus.remote_write "docker_mimir" {
+  endpoint {
+    url = "http://mimir:9009/api/v1/push"
+  }
+}
+```
+
+</details>
+
+#### Verify Your Work
+
+Reload the config:
+```bash
+make alloy-reload
+```
+
+Wait about 30 seconds for scrapes to run, then open Explore in Grafana, select Mimir as the data source, and run:
+```
+backend_up
+```
+
+You should see the `backend_up` metric now carrying `team`, `environment`, `aws_region`, `availability_zone`, and `instance_id` labels — infrastructure metadata that didn't exist on the original `/metrics` endpoint. You can now build dashboards that group backend health by team or availability zone, without the application needing to know anything about where it runs.
+
