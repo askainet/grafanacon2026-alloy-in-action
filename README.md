@@ -2,14 +2,15 @@
 
 <img width="2509" height="1406" alt="image" src="https://github.com/user-attachments/assets/e3a18293-1ffc-4405-8dbe-cd8179227344" />
 
-# Resources 
+# Resources
+
 - [Grafana Alloy documentation](https://grafana.com/docs/alloy/latest/)
   - [Alloy configuration blocks](https://grafana.com/docs/alloy/latest/reference/config-blocks/)
   - [Alloy components](https://grafana.com/docs/alloy/latest/reference/components/)
   - [Collect and forward data with Grafana Alloy](https://grafana.com/docs/alloy/latest/collect/)
   - [Grafana Alloy Tutorials](https://grafana.com/docs/alloy/latest/tutorials/)
-    
-# What is Alloy? When does it make sense to use it? 
+
+# What is Alloy? When does it make sense to use it?
 
 <img width="2557" height="1413" alt="image" src="https://github.com/user-attachments/assets/75f0f830-636e-4c6e-a535-c8895acfd777" />
 <img width="2499" height="1399" alt="image" src="https://github.com/user-attachments/assets/98f4e0f9-0623-4733-8bc9-517cf2ace5e9" />
@@ -20,11 +21,11 @@
 
 # Alloy configuration language 101
 
-### Think of Alloy as our secret weapon that collects, transforms, and exports our telemetry data. 
+### Think of Alloy as our secret weapon that collects, transforms, and exports our telemetry data.
 
 ![Alt Text](https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExeTkyOTc1eW1idjM4MW1sbXNtbmZjNzBrcHIyZWo4bXg2dGcwdWNyciZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/Mb9dQnfZXSBYMhU2Nv/giphy.gif)
 
-To instruct Alloy on how we want that done, we must write these instructions in a language (`Alloy syntax`) that Alloy understands. 
+To instruct Alloy on how we want that done, we must write these instructions in a language (`Alloy syntax`) that Alloy understands.
 
 <img width="2508" height="1409" alt="image" src="https://github.com/user-attachments/assets/427f1f24-0869-4d6a-87d5-5e91d5b0c9a9" />
 <img width="2508" height="1407" alt="image" src="https://github.com/user-attachments/assets/ad4a092f-e914-48f5-aa78-a49b575eb912" />
@@ -39,17 +40,17 @@ To instruct Alloy on how we want that done, we must write these instructions in 
 <img width="2504" height="1407" alt="image" src="https://github.com/user-attachments/assets/d344bd85-7d5b-4020-b063-554dcca8188f" />
 <img width="2511" height="1409" alt="image" src="https://github.com/user-attachments/assets/1ad9451c-40f0-4b4d-bd0e-e4adcd70bb9d" />
 
-The `usage` section gives you an example of how this particular component could be configured. 
+The `usage` section gives you an example of how this particular component could be configured.
 
 <img width="2510" height="1409" alt="image" src="https://github.com/user-attachments/assets/346cdf21-594d-4606-ab55-01dee9470e9a" />
 
-The `arguments` and `blocks` sections list what you could do with the data. Pay close attention to the name, type, description, default, and required columns so Alloy could understand what you want it to do! 
+The `arguments` and `blocks` sections list what you could do with the data. Pay close attention to the name, type, description, default, and required columns so Alloy could understand what you want it to do!
 
 <img width="2508" height="1411" alt="image" src="https://github.com/user-attachments/assets/6a6102f6-82e9-4e31-bff6-faac9a5fcf6b" />
 
 <img width="2509" height="1411" alt="image" src="https://github.com/user-attachments/assets/77f29151-513f-4258-8ad5-6c370ad9265a" />
 
-Focusing on these 3 things will point us in the right direction as we configure our pipeline. 
+Focusing on these 3 things will point us in the right direction as we configure our pipeline.
 <img width="2506" height="1411" alt="image" src="https://github.com/user-attachments/assets/eeda8160-d3f6-4b9f-8ce7-52205c460f7e" />
 
 # Learning environment setup
@@ -57,29 +58,34 @@ Focusing on these 3 things will point us in the right direction as we configure 
 <img width="2506" height="1411" alt="image" src="https://github.com/user-attachments/assets/c188f4a8-4c43-4104-880a-6bf6de1f9ddf" />
 
 Before getting started, make sure you:
+
 - install [Docker Desktop](https://www.docker.com/products/docker-desktop/) and [Docker Compose](https://docs.docker.com/compose/install/)
-  
 - clone the repo for the learning environment :
+
 ```
 git clone https://github.com/grafana/grafanacon2026-alloy-in-action.git
 ```
 
 To start the environment, run the following command from within the project's root directory:
+
 ```
-make start     
+make start
 ```
+
 You should see the following message in the terminal:
 
 ✅ Mission Control is online
 Health check: curl http://localhost:8080/health
 
 To stop the environment, run the following command from within the project's root directory:
+
 ```
 make stop
 ```
+
 Additional verification steps for setup:
 
-Open http://localhost:3000. You should see the Grafana page. 
+Open http://localhost:3000. You should see the Grafana page.
 <img width="1165" height="597" alt="image" src="https://github.com/user-attachments/assets/957de535-29a9-4c31-8dc6-6d1dad4f89f8" />
 
 Open http://localhost:12347. You should see the Alloy UI.
@@ -88,14 +94,16 @@ Open http://localhost:12347. You should see the Alloy UI.
 If everything loads, you're good to go!
 
 Troubleshooting
+
 - Docker not running? Start Docker Desktop and try again.
 - Port conflicts? Make sure ports 3000, 12347, 4317, and 4318 are free.
 
 Open the project using a text editor of your choice.
+
 - Expand the `alloy/` folder and open the `config.alloy` file.
 - We will use this file to build pipelines for the training exercises and missions.
 
-# Foundations 
+# Foundations
 
 ## Traces
 
@@ -109,19 +117,19 @@ Open the project using a text editor of your choice.
 
 ### Scenario
 
-Field agents are conducting operations around the world, and `mission-control` is tracking every request that flows through the system. 
+Field agents are conducting operations around the world, and `mission-control` is tracking every request that flows through the system.
 These operations generate **traces**, detailed records of each request's journey through the application.
 
 Right now, those traces are being generated but going nowhere. Without a pipeline to collect them, you're flying blind.
 
-**Your task:** 
+**Your task:**
 Build a trace pipeline so you can see what's happening inside mission-control.
 
 Once it's configured, you'll be able to view traces in the Mission Control Grafana dashboard and drill into individual operations.
 
 ### Build the Pipeline
 
-**Pipeline:** 
+**Pipeline:**
 
 `otelcol.receiver.otlp` → `otelcol.processor.batch` → `otelcol.exporter.otlphttp`
 
@@ -130,7 +138,9 @@ Once it's configured, you'll be able to view traces in the Mission Control Grafa
 - Export to Tempo at `http://tempo:4318`
 
 ### Starter Code
+
 Copy this into your `config.alloy` file and fill in the TODOs:
+
 ```alloy
 /*
   Foundation 1: Traces Pipeline
@@ -179,6 +189,7 @@ otelcol.exporter.otlphttp "docker_tempo" {
   }
 }
 ```
+
 <details>
 <summary>Full solution</summary>
   
@@ -218,7 +229,6 @@ otelcol.exporter.otlphttp "docker_tempo" {
 ```
 </details>
 
-
 ### Reloading the Config
 
 Whenever you make changes to the config file, you need to reload Alloy:
@@ -235,7 +245,7 @@ config reloaded
 
 ### Verify Your Work
 
-1. Go to the dashboard [**Mission Control Overview** dashboard](http://localhost:3000/d/mission-control-overview/mission-control-overview). 
+1. Go to the dashboard [**Mission Control Overview** dashboard](http://localhost:3000/d/mission-control-overview/mission-control-overview).
 
 The Traces panel at the bottom should now show data.
 
@@ -264,14 +274,14 @@ These logs are written to files inside the container, but no one's reading them.
 The environment is set up to mimic a scenario where Alloy is running on and has access to the machine's filesystem (a Daemonset in Kubernetes or simply an Alloy
 collector running on each VM).
 
-**Your task:** 
+**Your task:**
 Build a log pipeline to read mission-control's log files, parse the JSON, and send them to Loki.
 
 Once it's configured, you'll see logs flowing into Grafana where you can search and filter by component.
 
 ### Build the Pipeline
 
-**Pipeline:** 
+**Pipeline:**
 
 `loki.source.file` → `loki.process` → `loki.write`
 
@@ -402,16 +412,17 @@ Check the [**Mission Control Overview** dashboard](http://localhost:3000/d/missi
 
 <img width="2507" height="1407" alt="image" src="https://github.com/user-attachments/assets/3f1eb1ba-987b-4418-822c-b8210c408bc1" />
 
-Next, open Explore from the Grafana sidebar. 
+Next, open Explore from the Grafana sidebar.
 
 Explore is Grafana's query playground. It lets you run ad-hoc queries without building a dashboard.
 
 Select Loki as the data source and try this query:
+
 ```
 {component="agents"}
 ```
 
-You should see logs filtered to just field agent activity. 
+You should see logs filtered to just field agent activity.
 <img width="2509" height="1405" alt="image" src="https://github.com/user-attachments/assets/ce5b5337-78da-4eb1-b17e-0859435b046b" />
 Check `Common labels` at the top. It shows `component=agents`. That's the label we extracted from the JSON.
 
@@ -429,7 +440,7 @@ Without that label, you'd have to search the entire log body to filter by compon
 
 ### Scenario
 
-The `mission-control` application exposes a set of metrics in Prometheus format, accessible at the standard `/metrics` endpoint. Among those metrics are agent check-ins, used to track 
+The `mission-control` application exposes a set of metrics in Prometheus format, accessible at the standard `/metrics` endpoint. Among those metrics are agent check-ins, used to track
 which field operatives are active and where they're located.
 
 **Your task:**
@@ -447,7 +458,7 @@ This kind of inconsistency is common as organizations grow and teams or departme
 
 ### Build the Pipeline
 
-**Pipeline:** 
+**Pipeline:**
 
 `prometheus.scrape` → `prometheus.relabel` → `prometheus.remote_write`
 
@@ -618,28 +629,29 @@ config reloaded
 
 ### Verify Your Work
 
-Check the [**Mission Control Overview** dashboard](http://localhost:3000/d/mission-control-overview/mission-control-overview) and view the Active Agents panel. 
+Check the [**Mission Control Overview** dashboard](http://localhost:3000/d/mission-control-overview/mission-control-overview) and view the Active Agents panel.
 <img width="2508" height="1409" alt="image" src="https://github.com/user-attachments/assets/6088be81-95ea-427a-8f0d-2d2ff41b7660" />
 
 To verify your relabel rules are working, go to Explore, select Mimir as a data source and run this query:
+
 ```
 agent_comms_total{agent_id=~".+"}
 ```
-You should see that `agent_comms_total` metric now has `agent_id` and `country_code` labels (purple box). That confirms that our relabeling rules worked. 
-<img width="2506" height="1410" alt="image" src="https://github.com/user-attachments/assets/5fd78140-ef2a-4763-9058-67063bf62205" />
 
+You should see that `agent_comms_total` metric now has `agent_id` and `country_code` labels (purple box). That confirms that our relabeling rules worked.
+<img width="2506" height="1410" alt="image" src="https://github.com/user-attachments/assets/5fd78140-ef2a-4763-9058-67063bf62205" />
 
 ### How to use the Alloy UI to debug pipelines
 
-Alloy's UI is a useful tool that helps you visualize how Alloy is configured and what it is doing so you are able to debug efficiently. 
+Alloy's UI is a useful tool that helps you visualize how Alloy is configured and what it is doing so you are able to debug efficiently.
 
 Navigate to [localhost:12347](http://localhost:12347) to see the list of components (orange box) that alloy is currently configured with.
 Click on the blue ‘view’ button on the right side (red arrow).
 <img width="2506" height="1402" alt="image" src="https://github.com/user-attachments/assets/3d2c591c-2519-4aed-8f8b-7072b7a0dd91" />
 
-This page shows us the health of the component, the arguments it's using, and its current exports (green box). 
+This page shows us the health of the component, the arguments it's using, and its current exports (green box).
 
-This page also gives us quick access to the component’s documentation (orange arrow) and a Live Debugging view (yellow arrow). 
+This page also gives us quick access to the component’s documentation (orange arrow) and a Live Debugging view (yellow arrow).
 <img width="2501" height="1407" alt="image" src="https://github.com/user-attachments/assets/9ce8d733-7f14-4686-b128-248f2a0faa37" />
 
 When we click on the `Live Debugging` view, we will be able to see a real-time stream of telemetry flowing through a component.
@@ -650,16 +662,17 @@ Navigate to the `Graph` tab to access the graph of components and how they are c
 
 The number (pink box) shown on the dotted lines shows the rate of transfer between components. The window at the top (pink box) configures the interval over which Alloy should calculate the per-second rate, so a window of ‘5’ means that Alloy should look over the last 5 seconds to compute the rate.
 
-The color of the dotted line signifies what type of data are being transferred between components. See the color key (green box) for clarification. 
+The color of the dotted line signifies what type of data are being transferred between components. See the color key (green box) for clarification.
 
 **To debug the piplines using the Alloy UI**
+
 - Ensure that no component is reported as unhealthy.
 - Ensure that the arguments and exports for misbehaving components appear correct.
 - Use live debugging to verify the data is what you expect.
 
 # BREAK
 
-# Missions 
+# Missions
 
 Training's over. Each mission throws a new crisis at the pipelines you've built. Activate with `make missionN`, reset all with `make reset`.
 
@@ -668,18 +681,19 @@ Training's over. Each mission throws a new crisis at the pipelines you've built.
 ```bash
 make mission1
 ```
+
 <img width="2513" height="1411" alt="image" src="https://github.com/user-attachments/assets/418058d0-ff9c-41e6-b823-a3fd25b624de" />
 
 An adversary discovered that our server records the full request path as a metric label. They're now flooding us with requests to thousands of random URLs — paths like `/api/a3f8c2e1` that don't map to any real endpoint. Every unique path creates a new time series in Mimir, and cardinality is climbing fast.
 
 **Your orders:**
-Using what you learned in Foundation III, fetch the list of legitimate paths with `remote.http` from `http://mission-control:8080/api/metrics/allowed-paths`, then use `prometheus.relabel` with a `keep` action on the `path` label to filter out the garbage. Only real routes should make it through to Mimir. The [Alloy standard library](https://grafana.com/docs/alloy/latest/reference/stdlib/) functions may be helpful here!
+Using what you learned in the Metrics foundation, fetch the list of legitimate paths with `remote.http` from `http://mission-control:8080/api/metrics/allowed-paths`, then use `prometheus.relabel` with a `keep` action on the `path` label to filter out the garbage. Only real routes should make it through to Mimir. The [Alloy standard library](https://grafana.com/docs/alloy/latest/reference/stdlib/) functions may be helpful here!
 
 <img width="2504" height="1407" alt="image" src="https://github.com/user-attachments/assets/6e3da07a-2b2f-47d8-b673-0bd6a0636860" />
 
 ### Starter Code
 
-Add these components to your `config.alloy` and fill in the TODOs. You'll also need to update `standardize_agent_labels`'s `forward_to` to route through the new relabel component instead of going directly to `remote_write`.
+Add these components to your metrics section (below `standardize_agent_labels`) and fill in the TODOs. Relabeling must happen **before** `remote_write` so only allowed `path` labels reach Mimir.
 
 ```alloy
 /*
@@ -703,9 +717,6 @@ prometheus.relabel "mission1" {
   forward_to = [prometheus.remote_write.docker_mimir.receiver]
 }
 
-// Step 3: Update standardize_agent_labels forward_to:
-// Before: forward_to = [prometheus.remote_write.docker_mimir.receiver]
-// After:  forward_to = [prometheus.relabel.mission1.receiver]
 ```
 
 <details>
@@ -729,6 +740,13 @@ The response body is JSON. Alloy has a standard library with functions for encod
 
 </details>
 
+<details>
+<summary>Hint 4: pipeline order</summary>
+
+Scraped metrics should flow through your **standardize** relabel component, then through this new `keep` filter, then `remote_write`. If the filter is bypassed, cardinality in Mimir will not improve.
+
+</details>
+
 ### Verify Your Work
 
 ```bash
@@ -740,12 +758,14 @@ make mission1-verify
 ```bash
 make mission2
 ```
+
 <img width="2509" height="1410" alt="image" src="https://github.com/user-attachments/assets/001ea468-26d0-46b2-bca2-4d94fd96c680" />
 
 After the last incident, the higher-ups want us to collect the DEBUG logs we were previously dropping. It turns out those include request logs that could have helped us track down the attacker. But pumping everything into Loki would blow the budget. The directive: archive _all_ logs to a new S3 bucket named `audit-logs`, but only send `INFO`/`WARN`/`ERROR` logs to Loki for fast queries.
 
 **Your orders:**
 The skills you picked up in Foundation II will come in handy here. Split your log pipeline into two parallel paths:
+
 1. **All logs** -> S3 via `otelcol.receiver.loki` -> `otelcol.processor.batch` -> `otelcol.exporter.awss3`
 2. **Non-DEBUG only** -> Loki via a second `loki.process` and using a `stage.drop` to drop any `DEBUG` logs
 
@@ -753,7 +773,7 @@ The skills you picked up in Foundation II will come in handy here. Split your lo
 
 ### Starter Code
 
-Extend your existing log pipeline. Update `loki.process.mission_control_logs`'s `forward_to` to fan out to two destinations, then add the components below and fill in the TODOs.
+Extend your logs section (below `loki.process.mission_control_logs`). Update its `forward_to` to fan out to two destinations, then add the components below and fill in the TODOs.
 
 ```alloy
 /*
@@ -763,11 +783,7 @@ Extend your existing log pipeline. Update `loki.process.mission_control_logs`'s 
     Path 2 (non-DEBUG): loki.process -> loki.write
 */
 
-// Step 1: Update loki.process.mission_control_logs forward_to:
-// forward_to = [
-//   TODO,  // all logs -> S3 path
-//   TODO,  // non-DEBUG -> Loki path
-// ]
+// TODO: update loki.process.mission_control_logs forward_to with two receivers
 
 // Path 1: Bridge Loki logs to OTLP format for S3 export
 otelcol.receiver.loki "all_logs" {
@@ -856,6 +872,7 @@ make mission2-verify
 ```bash
 make mission3
 ```
+
 <img width="2506" height="1410" alt="image" src="https://github.com/user-attachments/assets/7e06835d-2fe1-4ae2-87af-bb9623913bd5" />
 
 We need to keep our network traffic to a minimum to maintain a low profile. Right now we're sending every single trace to Tempo, and that kind of volume is going to attract attention.
@@ -866,17 +883,13 @@ Go back to the pipeline you built in Foundation I and add head sampling to cut t
 
 ### Starter Code
 
-Add this component to your `config.alloy` and fill in the TODOs. You'll also need to update `otelcol.receiver.otlp.default`'s output to route through it.
+Add this component to your `config.alloy` and fill in the TODOs. Traces should enter the sampler **before** the batch processor.
 
 ```alloy
 /*
   Mission III: Selective Surveillance
   Pipeline: otelcol.receiver.otlp -> otelcol.processor.probabilistic_sampler -> otelcol.processor.batch -> otelcol.exporter.otlphttp
 */
-
-// Update otelcol.receiver.otlp "default" output:
-// Before: traces = [otelcol.processor.batch.default.input]
-// After:  traces = [TODO]
 
 otelcol.processor.probabilistic_sampler "mission3" {
   sampling_percentage = TODO
@@ -905,12 +918,14 @@ make mission3-verify
 ```bash
 make mission4
 ```
+
 <img width="2510" height="1410" alt="image" src="https://github.com/user-attachments/assets/54db1bff-6bab-4403-b7ae-52e7ea1b3078" />
 
 A field agent has sent us an encrypted dead drop and is transmitting the decryption key in fragments through span attributes on error traces. One piece every 15 seconds, five pieces total. With Head Sampling it will take too long to assemble the key.
 
 **Your orders:**
 Swap out the head sampler for `otelcol.processor.tail_sampling`. Configure two policies:
+
 1. `status_code` policy: keep all error traces (every fragment counts)
 2. `probabilistic` policy: sample 5% of everything else
 
@@ -920,17 +935,14 @@ Once you've recovered all the fragments, piece together the token and crack open
 make access-token                 # Check token fragment recovery (wait ~75s)
 make deaddrop KEY="your-token"    # Unlock the dead drop with the assembled token
 ```
+
 <img width="2508" height="1410" alt="image" src="https://github.com/user-attachments/assets/bbd15e2c-1971-44b2-b5cf-59a00a3160c0" />
 
 ### Starter Code
 
-Replace `otelcol.processor.probabilistic_sampler.mission3` with this component and fill in the TODOs. Update `otelcol.receiver.otlp.default`'s output to route through it instead.
+Remove head sampling from the trace path and add tail sampling instead. Fill in the TODOs. Point the OTLP receiver at this processor, then continue to batch and send to Tempo as before.
 
 ```alloy
-// Update otelcol.receiver.otlp "default" output:
-// Before: traces = [otelcol.processor.probabilistic_sampler.mission3.input]
-// After:  traces = [TODO]
-
 /*
   Mission IV: Leave No (Error) Trace
   Pipeline: otelcol.receiver.otlp -> otelcol.processor.tail_sampling -> otelcol.processor.batch -> otelcol.exporter.otlphttp
