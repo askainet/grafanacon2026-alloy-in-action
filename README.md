@@ -1022,7 +1022,7 @@ make deaddrop KEY="..."
 
 ## Side Missions and expanding your Alloy utility belt
 
-For the enterprising operative, these are extra missions that show some extra things that you
+For the enterprising operative, these are extra missions that show some more things that you
 can accomplish with Alloy.
 
 You don't have to, but it's recommended to comment out / move / delete your previous Alloy config
@@ -1060,7 +1060,62 @@ regex = '''gcon26_[a-f0-9]{16,}'''
 keywords = ["gcon26_"]
 ```
 
-The Alloy config (`alloy/config.alloy`) wires it up as a pipeline that reads a file, filters secrets, and echoes the result:
+#### Mission Objectives
+
+- [ ] Configure `loki.source.file` to read from the secrets test file
+- [ ] Wire `loki.secretfilter` to filter log lines using the custom gitleaks config
+- [ ] Forward filtered output to `loki.echo` to see the results
+- [ ] Verify that secrets are redacted in Alloy's stdout
+
+#### Build the Pipeline
+
+**Pipeline:**
+
+```
+loki.source.file → loki.secretfilter → loki.echo
+```
+
+Add this to your `config.alloy` file and fill in the TODOs:
+
+```alloy
+// Step 1: Read a file that may contain secrets
+loki.source.file "secrets" {
+  targets = [{"__path__" = "/etc/alloy/secrets.txt}]
+  file_match {
+    enabled = true
+  }
+  forward_to = [TODO]  // Forward to the secret filter's receiver
+}
+
+// Step 2: Filter secrets from incoming log lines
+loki.secretfilter "you_shall_not_pass" {
+  gitleaks_config = TODO           // Path to your gitleaks config inside the container
+  redact_with     = "/\\(ಠ_ಠ) |  < YOU SHALL NOT PASS! >"
+  forward_to      = [TODO]         // Forward to loki.echo
+}
+
+// Step 3: Print filtered output to stdout
+loki.echo "secrets" { }
+```
+
+<details>
+<summary>Hint 1: file paths</summary>
+
+The Docker setup mounts the `alloy/` directory to `/etc/alloy/` inside the container. So the secrets test file lives at `/etc/alloy/secrets.txt` and the gitleaks config is at `/etc/alloy/gitleaks.toml`.
+
+</details>
+
+<details>
+<summary>Hint 2: wiring components together</summary>
+
+Each Alloy component that accepts input exposes a `.receiver` export. To forward from one component to the next, reference `<component_type>.<label>.receiver`.
+
+For example, to forward to `loki.secretfilter "you_shall_not_pass"`, use `loki.secretfilter.you_shall_not_pass.receiver`.
+
+</details>
+
+<details>
+<summary>Full solution</summary>
 
 ```alloy
 loki.source.file "secrets" {
@@ -1080,7 +1135,9 @@ loki.secretfilter "you_shall_not_pass" {
 loki.echo "secrets" { }
 ```
 
-#### Try it out
+</details>
+
+#### Verify Your Work
 
 Open two terminals. Run `make alloy-logs` in one to watch Alloy's output.
 
@@ -1128,6 +1185,14 @@ backend_up{backend="loki:3100"} 1
 ```
 backend_up{backend="loki:3100", team="sigint", environment="classified", aws_region="us-east-1", availability_zone="us-east-1b", instance_type="r6g.2xlarge"} 1
 ```
+
+#### Mission Objectives
+
+- [ ] Fetch service discovery targets from the mission-control registry using `discovery.http`
+- [ ] Scrape health-check metrics from `mission-control:8080`
+- [ ] Enrich metrics by matching the `backend` label against SD target `__address__` labels
+- [ ] Copy infrastructure labels (`team`, `environment`, `aws_region`, `availability_zone`, `instance_type`) onto matched metrics
+- [ ] Send enriched metrics to Mimir and verify them in Grafana
 
 #### Build the Pipeline
 
