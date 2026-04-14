@@ -839,7 +839,7 @@ make mission2
 
 <img width="2509" height="1410" alt="image" src="https://github.com/user-attachments/assets/001ea468-26d0-46b2-bca2-4d94fd96c680" />
 
-After the last incident, the higher-ups want us to collect the DEBUG logs we were previously dropping. It turns out those include request logs that could have helped us track down the attacker. But pumping everything into Loki would blow the budget. The directive: archive _all_ logs to a new S3 bucket named `audit-logs`, but only send `INFO`/`WARN`/`ERROR` logs to Loki for fast queries.
+After the last incident, the higher-ups want us to collect the `DEBUG` logs we were previously dropping. It turns out those include request logs that could have helped us track down the attacker. But pumping everything into Loki would blow the budget. The directive: archive _all_ logs to a new S3 bucket named `audit-logs`, but only send `INFO`/`WARN`/`ERROR` logs to Loki for fast queries.
 
 **Your orders:**
 The skills you picked up in Foundation II will come in handy here. Split your log pipeline into two parallel paths:
