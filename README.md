@@ -1031,3 +1031,6 @@ make deaddrop KEY="..."
 
 - **Alloy not receiving traces?** Check `docker compose logs alloy` for connection errors
 - **Port conflicts?** Check ports 8080, 3000, 3100, 3200, 4317, 4318, 9009, 12347
+
+
+

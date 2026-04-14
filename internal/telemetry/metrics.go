@@ -14,6 +14,8 @@ type Metrics struct {
 	AgentCommsTotal         *prometheus.CounterVec
 	MissionActive           *prometheus.GaugeVec
 	RequestDuration         *prometheus.HistogramVec
+	BackendHealthChecks     *prometheus.CounterVec
+	BackendUp               *prometheus.GaugeVec
 }
 
 // InitMetrics creates and registers all Prometheus metrics
@@ -67,6 +69,20 @@ func InitMetrics() *Metrics {
 				Buckets: prometheus.DefBuckets,
 			},
 			[]string{"method", "path"},
+		),
+		BackendHealthChecks: promauto.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "backend_health_checks_total",
+				Help: "Total health check requests sent to backend services",
+			},
+			[]string{"backend"},
+		),
+		BackendUp: promauto.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Name: "backend_up",
+				Help: "Whether a backend service is reachable (1=up, 0=down)",
+			},
+			[]string{"backend"},
 		),
 	}
 }
