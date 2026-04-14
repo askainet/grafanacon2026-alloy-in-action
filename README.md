@@ -2,6 +2,34 @@
 
 <img width="2509" height="1406" alt="image" src="https://github.com/user-attachments/assets/e3a18293-1ffc-4405-8dbe-cd8179227344" />
 
+---
+
+## Table of Contents
+
+### Getting Started
+- [Resources](#resources)
+- [What is Alloy? When does it make sense to use it?](#what-is-alloy-when-does-it-make-sense-to-use-it)
+- [Alloy configuration language 101](#alloy-configuration-language-101)
+- [Learning environment setup](#learning-environment-setup)
+
+### Foundations (Training)
+- [Foundation 1: Traces](#traces)
+- [Foundation 2: Logs](#logs)
+- [Foundation 3: Metrics](#metrics)
+- [How to use the Alloy UI to debug pipelines](#how-to-use-the-alloy-ui-to-debug-pipelines)
+
+### Missions (Challenges)
+- [Mission I: Rogue Dimension](#mission-i-rogue-dimension) - cardinality filtering
+- [Mission II: Operation Cold Storage](#mission-ii-operation-cold-storage) - log splitting & S3 archival
+- [Mission III: Selective Surveillance](#mission-iii-selective-surveillance) - head sampling
+- [Mission IV: Leave No (Error) Trace](#mission-iv-leave-no-error-trace) - tail sampling
+
+### Reference
+- [All Commands](#all-commands)
+- [Troubleshooting](#troubleshooting)
+
+---
+
 # Resources
 
 - [Grafana Alloy documentation](https://grafana.com/docs/alloy/latest/)
@@ -57,51 +85,61 @@ Focusing on these 3 things will point us in the right direction as we configure 
 
 <img width="2506" height="1411" alt="image" src="https://github.com/user-attachments/assets/c188f4a8-4c43-4104-880a-6bf6de1f9ddf" />
 
-Before getting started, make sure you:
+> [!IMPORTANT]
+> **Prerequisites**
+>
+> Make sure you have the following installed before continuing:
+> - [Docker Desktop](https://www.docker.com/products/docker-desktop/) or [Docker Engine](https://docs.docker.com/engine/install/)
+> - [Docker Compose](https://docs.docker.com/compose/install/) (included with Docker Desktop)
 
-- install [Docker Desktop](https://www.docker.com/products/docker-desktop/) and [Docker Compose](https://docs.docker.com/compose/install/)
-- clone the repo for the learning environment :
+**Step 1:** Clone the repo for the learning environment:
 
-```
+```bash
 git clone https://github.com/grafana/grafanacon2026-alloy-in-action.git
 ```
 
-To start the environment, run the following command from within the project's root directory:
+**Step 2:** Start the environment from within the project's root directory:
 
-```
+```bash
 make start
 ```
 
 You should see the following message in the terminal:
 
+```
 ✅ Mission Control is online
 Health check: curl http://localhost:8080/health
-
-To stop the environment, run the following command from within the project's root directory:
-
-```
-make stop
 ```
 
-Additional verification steps for setup:
+> [!TIP]
+> To stop the environment at any time, run `make stop` from the project root.
 
-Open http://localhost:3000. You should see the Grafana page.
+### Verify the Setup
+
+1. Open [Grafana (localhost:3000)](http://localhost:3000). You should see the Grafana page:
 <img width="1165" height="597" alt="image" src="https://github.com/user-attachments/assets/957de535-29a9-4c31-8dc6-6d1dad4f89f8" />
 
-Open http://localhost:12347. You should see the Alloy UI.
+2. Open [the Alloy UI (localhost:12347)](http://localhost:12347). You should see the Alloy UI:
 <img width="1158" height="473" alt="image" src="https://github.com/user-attachments/assets/f4b1c71d-6f05-4c45-b8ee-6ec5d2bfb898" />
 
-If everything loads, you're good to go!
+If both pages load, you're good to go!
 
-**Troubleshooting**
+> [!WARNING]
+> **Setup not working?**
+> - **Docker not running?**
+>   If you're using Docker Desktop, start it (or restart it if it is already running) and try again. If you're using Docker Engine, make sure the Docker daemon is running (`sudo systemctl start docker`).
+> - **Port conflicts?**
+>   Make sure ports 3000, 12347, 4317, and 4318 are free.
 
-- Docker not running? Start Docker Desktop and try again.
-- Port conflicts? Make sure ports 3000, 12347, 4317, and 4318 are free.
+### Open the Config File
 
 Open the project using a text editor of your choice.
 
-- Expand the `alloy/` folder and open the `config.alloy` file.
-- We will use this file to build pipelines for the training exercises and missions.
+1. Expand the `alloy/` folder and open the `config.alloy` file.
+2. We will use this file to build pipelines for the training exercises and missions.
+
+> [!NOTE]
+> Throughout this workshop, you'll edit `alloy/config.alloy` and then reload Alloy to apply your changes. Each section builds on the previous one, so keep your earlier work in the file as you add new pipelines.
 
 # Foundations
 
@@ -140,6 +178,9 @@ Once it's configured, you'll be able to view traces in the Mission Control Grafa
 ### Starter Code
 
 Copy this into your `config.alloy` file and fill in the TODOs:
+
+> [!TIP]
+> **How the starter code works:** Each exercise gives you a code block with `TODO` placeholders. Replace each `TODO` with the correct value. The comments next to each `TODO` give you a hint about what goes there.
 
 ```alloy
 /*
@@ -243,11 +284,12 @@ If the config is valid, you'll see:
 config reloaded
 ```
 
+> [!CAUTION]
+> If you see an error instead of `config reloaded`, double-check your config for typos, missing commas, or smart quotes. See the [Troubleshooting](#troubleshooting) section for common issues.
+
 ### Verify Your Work
 
-1. Go to the dashboard [**Mission Control Overview** dashboard](http://localhost:3000/d/mission-control-overview/mission-control-overview).
-
-The Traces panel at the bottom should now show data.
+1. Go to the [Mission Control Overview dashboard (localhost:3000)](http://localhost:3000/d/mission-control-overview/mission-control-overview). The Traces panel at the bottom should now show data.
 
 <img width="2512" height="1411" alt="image" src="https://github.com/user-attachments/assets/33dc061c-b87f-4c77-b4d5-4947509d5f65" />
 
@@ -392,41 +434,34 @@ loki.write "docker_loki" {
 > [!TIP]
 > You can also use [`local.file_match`](https://grafana.com/docs/alloy/latest/reference/components/local/local.file_match/) to perform file discovery. This used to be the only way to do it. However, using the `file_match` block inside `loki.source.file` has less overhead and results in a simpler pipeline.
 
-### Reloading the Config
+### Reload and Verify
 
-Whenever you make changes to the config file, you need to reload Alloy:
-
-```bash
-make alloy-reload
-```
-
-If the config is valid, you'll see:
-
-```
-config reloaded
-```
+> [!IMPORTANT]
+> Remember to reload Alloy after every config change: `make alloy-reload`
 
 ### Verify Your Work
 
-Check the [**Mission Control Overview** dashboard](http://localhost:3000/d/mission-control-overview/mission-control-overview). The logs panel should now show data.
+1. Check the [Mission Control Overview dashboard (localhost:3000)](http://localhost:3000/d/mission-control-overview/mission-control-overview). The logs panel should now show data.
 
 <img width="2507" height="1407" alt="image" src="https://github.com/user-attachments/assets/3f1eb1ba-987b-4418-822c-b8210c408bc1" />
 
-Next, open Explore from the Grafana sidebar.
+2. Next, open Explore from the Grafana sidebar.
 
-Explore is Grafana's query playground. It lets you run ad-hoc queries without building a dashboard.
+   Explore is Grafana's query playground. It lets you run ad-hoc queries without building a dashboard.
 
-Select Loki as the data source and try this query:
+3. Select **Loki** as the data source and try this query:
 
-```
-{component="agents"}
-```
+   ```
+   {component="agents"}
+   ```
 
-You should see logs filtered to just field agent activity.
+4. You should see logs filtered to just field agent activity.
 <img width="2509" height="1405" alt="image" src="https://github.com/user-attachments/assets/ce5b5337-78da-4eb1-b17e-0859435b046b" />
-Check `Common labels` at the top. It shows `component=agents`. That's the label we extracted from the JSON.
 
-Without that label, you'd have to search the entire log body to filter by component. With it, you can filter instantly.
+5. Check `Common labels` at the top. It shows `component=agents`. That's the label we extracted from the JSON.
+
+> [!TIP]
+> **Why labels matter:** Without that label, you'd have to search the entire log body to filter by component. With it, you can filter instantly. Labels are indexed in Loki, making queries fast and efficient.
 
 ## Metrics
 
@@ -613,32 +648,23 @@ prometheus.remote_write "docker_mimir" {
 
 </details>
 
-### Reloading the Config
+### Reload and Verify
 
-Whenever you make changes to the config file, you need to reload Alloy:
-
-```bash
-make alloy-reload
-```
-
-If the config is valid, you'll see:
-
-```
-config reloaded
-```
+> [!IMPORTANT]
+> Remember to reload Alloy after every config change: `make alloy-reload`
 
 ### Verify Your Work
 
-Check the [**Mission Control Overview** dashboard](http://localhost:3000/d/mission-control-overview/mission-control-overview) and view the Active Agents panel.
+1. Check the [Mission Control Overview dashboard (localhost:3000)](http://localhost:3000/d/mission-control-overview/mission-control-overview) and view the Active Agents panel.
 <img width="2508" height="1409" alt="image" src="https://github.com/user-attachments/assets/6088be81-95ea-427a-8f0d-2d2ff41b7660" />
 
-To verify your relabel rules are working, go to Explore, select Mimir as a data source and run this query:
+2. To verify your relabel rules are working, go to Explore, select **Mimir** as a data source and run this query:
 
-```
-agent_comms_total{agent_id=~".+"}
-```
+   ```
+   agent_comms_total{agent_id=~".+"}
+   ```
 
-You should see that `agent_comms_total` metric now has `agent_id` and `country_code` labels (purple box). That confirms that our relabeling rules worked.
+3. You should see that `agent_comms_total` metric now has `agent_id` and `country_code` labels (purple box). That confirms that our relabeling rules worked.
 <img width="2506" height="1410" alt="image" src="https://github.com/user-attachments/assets/5fd78140-ef2a-4763-9058-67063bf62205" />
 
 ### How to use the Alloy UI to debug pipelines
@@ -664,13 +690,28 @@ The number (pink box) shown on the dotted lines shows the rate of transfer betwe
 
 The color of the dotted line signifies what type of data are being transferred between components. See the color key (green box) for clarification.
 
-**To debug the pipelines using the Alloy UI**
+> [!TIP]
+> **Quick debugging checklist with the Alloy UI:**
+> 1. Ensure that no component is reported as unhealthy.
+> 2. Ensure that the arguments and exports for misbehaving components appear correct.
+> 3. Use live debugging to verify the data is what you expect.
 
-- Ensure that no component is reported as unhealthy.
-- Ensure that the arguments and exports for misbehaving components appear correct.
-- Use live debugging to verify the data is what you expect.
+---
 
-# BREAK
+# Break
+
+> [!NOTE]
+> **Nice work completing the foundations!**
+>
+> You now have a working pipeline for traces, logs, and metrics.
+>
+> If you got stuck on any foundation, you can copy a checkpoint file to catch up:
+> ```bash
+> cp alloy/checkpoints/foundation3.alloy alloy/config.alloy
+> make alloy-reload
+> ```
+
+---
 
 # Missions
 
@@ -693,7 +734,7 @@ You'll be expanding on what you did in the Metrics foundation. There is a pre-ma
 
 ### Before You Start
 
-Open [**Explore**](http://localhost:3000/explore) in Grafana, select **Mimir** as the data source, and run:
+Open [Explore in Grafana (localhost:3000/explore)](http://localhost:3000/explore), select **Mimir** as the data source, and run:
 
 ```
 http_requests_total
@@ -738,7 +779,8 @@ The API at `http://mission-control:8080/api/metrics/allowed-paths` returns a **r
 
 Try looking at the endpoint to see what the response looks like: [localhost:8080/api/metrics/allowed-paths](http://localhost:8080/api/metrics/allowed-paths)
 
-> **Note:** Use `localhost` when curling from your terminal. Inside the Alloy config, use `mission-control`, that's the Docker-internal hostname. Alloy runs inside the same Docker network as mission-control, but your terminal does not.
+
+Use `localhost` when curling from your terminal. Inside the Alloy config, use `mission-control`, which is the Docker-internal hostname.
 
 </details>
 
@@ -778,20 +820,20 @@ Scraped metrics should flow through your **standardize** relabel component, then
 
 ### Verify Your Work
 
-> **Note:** After reloading, give it **~20 seconds** for scraped metrics to flow through the pipeline and land in Mimir before verifying.
+> [!NOTE]
+> After reloading, give it **~20 seconds** for scraped metrics to flow through the pipeline and land in Mimir before verifying.
 
 ```bash
 make mission1-verify
 ```
 
-Then you can confirm in the Alloy livedebugging view. 
+Then you can confirm with the Alloy livedebugging view:
 
-To do so:
-- Navigate to the Alloy UI at [localhost:12347](http://localhost:12347)
-- Click on `View` for `prometheus.remote_write.docker_mimir`
-- Click `livedebugging` at the top, under the component identifier
-- Wait for one scrape to come in and click `Stop` on the top right
-- In the search bar, enter `http_requests_total` to filter for only the relevant samples
+1. Navigate to [the Alloy UI (localhost:12347)](http://localhost:12347)
+2. Click on `View` for `prometheus.remote_write.docker_mimir`
+3. Click `livedebugging` at the top, under the component identifier
+4. Wait for one scrape to come in and click `Stop` on the top right
+5. In the search bar, enter `http_requests_total` to filter for only the relevant samples
 
 You should see only **legitimate paths** (like `/api/agents`, `/metrics`, etc.). No more random paths!
 
@@ -803,7 +845,7 @@ make mission2
 
 <img width="2509" height="1410" alt="image" src="https://github.com/user-attachments/assets/001ea468-26d0-46b2-bca2-4d94fd96c680" />
 
-After the last incident, the higher-ups want us to collect the DEBUG logs we were previously dropping. It turns out those include request logs that could have helped us track down the attacker. But pumping everything into Loki would blow the budget. The directive: archive _all_ logs to a new S3 bucket named `audit-logs`, but only send `INFO`/`WARN`/`ERROR` logs to Loki for fast queries.
+After the last incident, the higher-ups want us to collect the `DEBUG` logs we were previously dropping. It turns out those include request logs that could have helped us track down the attacker. But pumping everything into Loki would blow the budget. The directive: archive _all_ logs to a new S3 bucket named `audit-logs`, but only send `INFO`/`WARN`/`ERROR` logs to Loki for fast queries.
 
 **Your orders:**
 The skills you picked up in Foundation II will come in handy here. Split your log pipeline into two parallel paths:
@@ -811,9 +853,9 @@ The skills you picked up in Foundation II will come in handy here. Split your lo
 1. **All logs** -> S3 via `otelcol.receiver.loki` -> `otelcol.processor.batch` -> `otelcol.exporter.awss3`
 2. **Non-DEBUG only** -> Loki via a second `loki.process` and using a `stage.drop` to drop any `DEBUG` logs
 
-> **Why OTLP components for Path 1?** The S3 exporter (`otelcol.exporter.awss3`) is an OpenTelemetry component.
-
-There's no native Loki component for writing to S3. To bridge the gap, `otelcol.receiver.loki` accepts Loki log entries and converts them to OTLP format, so they can flow through the `otelcol` pipeline to S3.
+> [!NOTE]
+> **Why OTLP components for Path 1?**
+> The S3 exporter (`otelcol.exporter.awss3`) is an OpenTelemetry component. There's no native Loki component for writing to S3. To bridge the gap, `otelcol.receiver.loki` accepts Loki log entries and converts them to OTLP format, so they can flow through the `otelcol` pipeline to S3.
 
 <img width="2511" height="1411" alt="image" src="https://github.com/user-attachments/assets/ce6e21b3-4c1e-41db-b9ed-a1450fef230a" />
 
@@ -915,7 +957,7 @@ make mission2-verify
 
 Then confirm both paths manually:
 
-**Path 2 (Loki - no DEBUG):** Open **Explore** in Grafana, select **Loki**, and set the time range to **Last 5 minutes**. Run:
+**Path 2 (Loki, no DEBUG):** Open [Explore in Grafana (localhost:3000/explore)](http://localhost:3000/explore), select **Loki**, and set the time range to **Last 5 minutes**. Run:
 
 ```
 {filename=~".+"}
@@ -923,7 +965,7 @@ Then confirm both paths manually:
 
 You should still see `INFO` logs but no `DEBUG` logs in the time since you reloaded your Alloy config.
 
-**Path 1 (S3 - all logs):** Run `make s3-list` in your terminal. Look for:
+**Path 1 (S3, all logs):** Run `make s3-list` in your terminal. Look for:
 
 - **File keys** like `logs/year=2026/month=04/day=13/hour=21/minute=54/logs_...txt` show log files are being written to S3 organized by timestamp
 - **DEBUG entries** in the content (`"level":"DEBUG"`) mixed with INFO and WARN confirms S3 is receiving all logs, not just the filtered ones that go to Loki
@@ -944,7 +986,7 @@ Go back to the pipeline you built in Foundation I and add head sampling to cut t
 
 ### Before You Start
 
-Open the **Alloy UI** at [localhost:12347](http://localhost:12347), click the **Graph** tab, and note the **trace rate** on the edges leading to Tempo. You'll compare this to the rate after you add sampling.
+Open [the Alloy UI (localhost:12347)](http://localhost:12347), click the **Graph** tab, and note the **trace rate** on the edges leading to Tempo. You'll compare this to the rate after you add sampling.
 
 ### Starter Code
 
@@ -978,7 +1020,7 @@ OTLP components use `.input` to receive data, just like you wired the batch proc
 make mission3-verify
 ```
 
-Then confirm in the **Alloy UI**: go to [localhost:12347](http://localhost:12347), click the **Graph** tab, and check the trace rate on the edges leading to Tempo. You should see a **significant drop** compared to before.
+Then confirm in the Alloy UI: go to [the Alloy UI (localhost:12347)](http://localhost:12347), click the **Graph** tab, and check the trace rate on the edges leading to Tempo. You should see a **significant drop** compared to before.
 
 ## Mission IV: Leave No (Error) Trace
 
@@ -1005,9 +1047,12 @@ make deaddrop KEY="your-token"    # Unlock the dead drop with the assembled toke
 
 <img width="2508" height="1410" alt="image" src="https://github.com/user-attachments/assets/bbd15e2c-1971-44b2-b5cf-59a00a3160c0" />
 
+> [!IMPORTANT]
+> Before adding tail sampling, remove the head sampler from Mission III. You can either delete it, comment it out, or rewire the pipeline to skip it.
+
 ### Starter Code
 
-Remove head sampling from the trace path and add tail sampling instead. Fill in the TODOs. Point the OTLP receiver at this processor, then continue to batch and send to Tempo as before.
+Add tail sampling to your trace pipeline and fill in the TODOs. Point the OTLP receiver at this processor, then continue to batch and send to Tempo as before.
 
 ```alloy
 /*
@@ -1078,26 +1123,42 @@ make mission4-verify
 
 ## All Commands
 
-```bash
-# Environment
-make start / stop / restart / clean
-
-# Monitoring
-make logs / alloy-logs / metrics / status
-
-# Missions
-make mission1 / mission2 / mission3 / mission4 / reset
-make mission1-verify / mission2-verify / mission3-verify / mission4-verify
-
-# Mission 4 endgame
-make access-token
-make deaddrop KEY="..."
-```
+| Command | Description |
+|---------|-------------|
+| **Environment** | |
+| `make start` | Start all services |
+| `make stop` | Stop all services and clean volumes |
+| `make restart` | Restart everything |
+| `make clean` | Full cleanup including logs |
+| **Config** | |
+| `make alloy-reload` | Reload Alloy config after changes |
+| **Monitoring** | |
+| `make logs` | Tail mission-control logs |
+| `make alloy-logs` | Tail Alloy logs |
+| `make metrics` | View metrics endpoint |
+| `make status` | Check mission status |
+| **Missions** | |
+| `make mission1` / `mission2` / `mission3` / `mission4` | Activate a mission |
+| `make mission1-verify` / `mission2-verify` / `mission3-verify` / `mission4-verify` | Verify a mission solution |
+| `make reset` | Reset all missions |
+| **Mission IV Endgame** | |
+| `make access-token` | Check token fragment recovery (wait ~75s) |
+| `make deaddrop KEY="..."` | Unlock the dead drop with your assembled token |
 
 ## Troubleshooting
 
-- **Alloy not receiving traces?** Check `docker compose logs alloy` for connection errors
-- **Port conflicts?** Check ports 8080, 3000, 3100, 3200, 4317, 4318, 9009, 12347
-- **`illegal character U+201C`** - You have "smart quotes" (curly quotes) in your config, likely from copying text via a browser or rich-text editor. Replace all `"` and `"` with plain ASCII `"`.
-- **`scrape_timeout greater than scrape_interval`** - Add `scrape_timeout = "4s"` to your `prometheus.scrape` block (or any value less than `scrape_interval`).
-- **Mission 2: `NoSuchBucket`** - The S3 init container may have failed on startup. Recreate the bucket manually: `docker compose exec localstack curl -X PUT http://localhost:4566/audit-logs`
+> [!CAUTION]
+> **`illegal character U+201C`**
+> This means you have “smart quotes” (curly quotes) in your config, likely from copying text via a browser or rich-text editor. Replace all `“` and `”` with plain ASCII double quotes (`”`).
+
+- **Alloy not receiving traces?**
+  Run `make alloy-logs` to check for connection errors.
+- **Port conflicts?**
+  Check ports 8080, 3000, 3100, 3200, 4317, 4318, 9009, 12347.
+- **`scrape_timeout greater than scrape_interval`?**
+  Add `scrape_timeout = "4s"` to your `prometheus.scrape` block (or any value less than `scrape_interval`).
+- **Mission 2: `NoSuchBucket`?**
+  The S3 init container may have failed on startup. Recreate the bucket manually:
+  ```bash
+  docker compose exec localstack curl -X PUT http://localhost:4566/audit-logs
+  ```
