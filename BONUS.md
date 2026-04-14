@@ -4,6 +4,12 @@ Extra missions that show what else you can accomplish with Alloy.
 
 It's recommended to comment out or remove your previous Alloy config before starting these exercises to reduce log noise.
 
+> **Note:** If you completed the main missions, Mimir may have hit its series limit from the cardinality explosion in Mission 1. If you see "No data" when querying new metrics, recreate Mimir to clear the old data:
+> ```bash
+> docker compose down mimir && docker compose up -d mimir
+> ```
+> Wait about 30 seconds after recreating before querying again.
+
 ## Debugging components
 
 Alloy includes components specifically for debugging your telemetry pipelines:
@@ -115,19 +121,25 @@ loki.echo "secrets" { }
 
 ### Verify Your Work
 
-Open two terminals. Run `make alloy-logs` in one to watch Alloy's output.
+Open two terminals, both in the **project root directory** (`grafanacon2026-alloy-in-action/`).
 
-Reload the config:
+**Terminal 1 - Alloy logs:** This streams the Alloy container's stdout so you can see what `loki.echo` prints. Run:
+```bash
+make alloy-logs
+```
+This is equivalent to `docker compose logs alloy -f`. Leave it running.
+
+**Terminal 2 - Commands:** Reload the config, then write a test secret:
 ```bash
 make alloy-reload
 ```
 
-In the other terminal, append a line containing a secret:
+Then append a line containing a secret:
 ```bash
 echo "gcon26_a1b2c3d4e5f60718" >> ./alloy/secrets.txt
 ```
 
-In the Alloy logs terminal, you should see the secret replaced with the redaction string:
+Back in **Terminal 1** (the Alloy logs), you should see the secret replaced with the redaction string:
 ```
 level=info component_path=/ component_id=loki.echo.secrets receiver=loki.echo.secrets entry="/\\(ಠ_ಠ) |  < YOU SHALL NOT PASS! >" ...
 ```
@@ -237,11 +249,11 @@ prometheus.enrich "infra_metadata" {
   targets = TODO  // Use the discovery component's .targets export
 
   // Match the "backend" label on metrics against "__address__" on SD targets
-  target_match_label  = TODO
-  metrics_match_label = TODO
+  target_match_label  = "TODO"
+  metrics_match_label = "TODO"
 
   // Only copy the labels we care about (without this, all SD labels including __address__ would be copied)
-  labels_to_copy = [TODO]
+  labels_to_copy = ["TODO", "TODO", "TODO", "TODO", "TODO"]
 
   forward_to = [TODO]  // Forward to remote_write
 }
@@ -255,7 +267,17 @@ prometheus.remote_write "docker_mimir" {
 ```
 
 <details>
-<summary>Hint 1: discovery.http exports</summary>
+<summary>Hint 1: service registry URL</summary>
+
+The service registry is at `http://mission-control:8080/api/sd/targets`. You can curl it from your terminal (using `localhost`) to see what it returns:
+```bash
+curl -s http://localhost:8080/api/sd/targets | jq .
+```
+
+</details>
+
+<details>
+<summary>Hint 2: discovery.http exports</summary>
 
 `discovery.http` exposes a `.targets` export: a list of target maps containing `__address__` and all labels from the SD response. Reference it as `discovery.http.lgtm_registry.targets`.
 
@@ -269,6 +291,18 @@ prometheus.remote_write "docker_mimir" {
 Here, the scraped metric has `backend="loki:3100"` and the SD target has `__address__="loki:3100"`. So `metrics_match_label = "backend"` and `target_match_label = "__address__"`.
 
 Metrics that don't have a `backend` label (like `http_requests_total`) pass through unchanged.
+
+</details>
+
+<details>
+<summary>Hint 3: available labels</summary>
+
+Curl the service registry to see what labels each target has:
+```bash
+curl -s http://localhost:8080/api/sd/targets | jq .
+```
+
+The labels you see in the response (like `team`, `aws_region`, etc.) are what you can list in `labels_to_copy`.
 
 </details>
 
