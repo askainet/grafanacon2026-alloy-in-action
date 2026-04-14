@@ -93,7 +93,7 @@ Open http://localhost:12347. You should see the Alloy UI.
 
 If everything loads, you're good to go!
 
-Troubleshooting
+**Troubleshooting**
 
 - Docker not running? Start Docker Desktop and try again.
 - Port conflicts? Make sure ports 3000, 12347, 4317, and 4318 are free.
@@ -311,7 +311,7 @@ loki.source.file "mission_control" {
 /*
 Step 2: Extract "component" from JSON and promote to label
 Original log: {"level":"INFO","component":"agents","msg":"Request received"}
-Labels are indexed — makes filtering fast in Grafana
+Labels are indexed - makes filtering fast in Grafana
 */
 
 loki.process "mission_control_logs" {
@@ -664,7 +664,7 @@ The number (pink box) shown on the dotted lines shows the rate of transfer betwe
 
 The color of the dotted line signifies what type of data are being transferred between components. See the color key (green box) for clarification.
 
-**To debug the piplines using the Alloy UI**
+**To debug the pipelines using the Alloy UI**
 
 - Ensure that no component is reported as unhealthy.
 - Ensure that the arguments and exports for misbehaving components appear correct.
@@ -684,16 +684,30 @@ make mission1
 
 <img width="2513" height="1411" alt="image" src="https://github.com/user-attachments/assets/418058d0-ff9c-41e6-b823-a3fd25b624de" />
 
-An adversary discovered that our server records the full request path as a metric label. They're now flooding us with requests to thousands of random URLs — paths like `/api/a3f8c2e1` that don't map to any real endpoint. Every unique path creates a new time series in Mimir, and cardinality is climbing fast.
+An adversary discovered that our server records the full request path as a metric label. They're now flooding us with requests to thousands of random URLs, paths like `/api/a3f8c2e1` that don't map to any real endpoint. Every unique path creates a new time series in Mimir, and cardinality is climbing fast.
 
 **Your orders:**
 Using what you learned in the Metrics foundation, fetch the list of legitimate paths with `remote.http` from `http://mission-control:8080/api/metrics/allowed-paths`, then use `prometheus.relabel` with a `keep` action on the `path` label to filter out the garbage. Only real routes should make it through to Mimir. The [Alloy standard library](https://grafana.com/docs/alloy/latest/reference/stdlib/) functions may be helpful here!
 
 <img width="2504" height="1407" alt="image" src="https://github.com/user-attachments/assets/6e3da07a-2b2f-47d8-b673-0bd6a0636860" />
 
+### Before You Start
+
+Open **Explore** in Grafana, select **Mimir** as the data source, and run:
+
+```
+http_requests_total
+```
+
+If the query times out, try narrowing the time range to **Last 5 minutes**. That's the cardinality explosion in action. 
+
+There are so many junk series that Mimir can't even serve the query at wider time ranges. 
+
+Scroll through the series list and notice the random paths like `/api/a3f8c2e1` with `status="404"`. After you apply the fix, you should only see legitimate paths.
+
 ### Starter Code
 
-Add these components to your metrics section (below `standardize_agent_labels`) and fill in the TODOs. Your new relabel stage must sit **before** `remote_write` so only allowed `path` labels reach Mimir.
+Add these components to your metrics section (below `standardize_agent_labels`) and fill in the TODOs. Relabeling must happen **before** `remote_write` so only allowed `path` labels reach Mimir.
 
 ```alloy
 /*
@@ -706,7 +720,7 @@ remote.http "allowed_paths_regex" {
   url = "http://mission-control:8080/api/metrics/allowed-paths"
 }
 
-// Step 2: Filter — only keep metrics where "path" is a known legitimate route
+// Step 2: Filter - only keep metrics where "path" is a known legitimate route
 prometheus.relabel "mission1" {
   rule {
     action        = "keep"
@@ -720,9 +734,16 @@ prometheus.relabel "mission1" {
 ```
 
 <details>
-<summary>Hint 1: parsing the response</summary>
+<summary>Hint 1: you don't need to write regex</summary>
 
-The response body is JSON. Alloy has a standard library with functions for encoding and decoding — check the [encoding functions](https://grafana.com/docs/alloy/latest/reference/stdlib/encoding/).
+The API at `http://mission-control:8080/api/metrics/allowed-paths` returns a **ready-made regex** for you. Your job isn't to craft a pattern. It's to figure out how to get that value from the API response into the `regex` field using Alloy expressions.
+
+Try curling the endpoint to see what the response looks like:
+```bash
+curl -s http://localhost:8080/api/metrics/allowed-paths
+```
+
+> **Note:** Use `localhost` when curling from your terminal. Inside the Alloy config, use `mission-control`, that's the Docker-internal hostname. Alloy runs inside the same Docker network as mission-control, but your terminal does not.
 
 </details>
 
@@ -734,24 +755,47 @@ The response body is JSON. Alloy has a standard library with functions for encod
 </details>
 
 <details>
-<summary>Hint 3: putting it together</summary>
+<summary>Hint 3: parsing the response</summary>
 
-`encoding.from_json()` parses a JSON string into an object. Fields on the resulting object are accessible with dot notation — the same way you reference component exports.
+The response body is JSON, not a plain string. Use `encoding.from_json()` from the [Alloy standard library](https://grafana.com/docs/alloy/latest/reference/stdlib/encoding/) to parse it into an object you can access.
 
 </details>
 
 <details>
-<summary>Hint 4: pipeline order</summary>
+<summary>Hint 4: putting it together</summary>
 
-Scraped metrics should flow through your **standardize** relabel block, then through this new `keep` filter, then `remote_write`. If the filter is bypassed, cardinality in Mimir will not improve.
+In Alloy, you can chain expressions together. The general pattern looks like:
+
+```
+encoding.from_json(some_component.content).some_field
+```
+
+Parse the content, then access the field you need with dot notation.
+
+</details>
+
+<details>
+<summary>Hint 5: pipeline order</summary>
+
+Scraped metrics should flow through your **standardize** relabel component, then through this new `keep` filter, then `remote_write`. If the filter is bypassed, cardinality in Mimir will not improve.
 
 </details>
 
 ### Verify Your Work
 
+> **Note:** After reloading, give it **~20 seconds** for scraped metrics to flow through the pipeline and land in Mimir before verifying.
+
 ```bash
 make mission1-verify
 ```
+
+Then confirm in Grafana: go to **Explore**, select **Mimir**, and run:
+
+```
+http_requests_total
+```
+
+You should see only **legitimate paths** (like `/api/agents`, `/metrics`, etc.). No more random paths!
 
 ## Mission II: Operation Cold Storage
 
@@ -768,6 +812,10 @@ The skills you picked up in Foundation II will come in handy here. Split your lo
 
 1. **All logs** -> S3 via `otelcol.receiver.loki` -> `otelcol.processor.batch` -> `otelcol.exporter.awss3`
 2. **Non-DEBUG only** -> Loki via a second `loki.process` and using a `stage.drop` to drop any `DEBUG` logs
+
+> **Why OTLP components for Path 1?** The S3 exporter (`otelcol.exporter.awss3`) is an OpenTelemetry component.
+
+There's no native Loki component for writing to S3. To bridge the gap, `otelcol.receiver.loki` accepts Loki log entries and converts them to OTLP format, so they can flow through the `otelcol` pipeline to S3.
 
 <img width="2511" height="1411" alt="image" src="https://github.com/user-attachments/assets/ce6e21b3-4c1e-41db-b9ed-a1450fef230a" />
 
@@ -804,7 +852,7 @@ otelcol.processor.batch "s3_logs" {
 
 otelcol.exporter.awss3 "audit_logs" {
   s3_uploader {
-    s3_bucket = TODO
+    s3_bucket = "TODO"
     s3_prefix = "logs"
 
     endpoint            = "http://localstack:4566"
@@ -829,7 +877,7 @@ otelcol.exporter.awss3 "audit_logs" {
 loki.process "filter_debug" {
   stage.json {
     expressions = {
-      level = TODO,  // which JSON field contains the log level?
+      level = "TODO",  // which JSON field contains the log level?
     }
   }
 
@@ -842,7 +890,7 @@ loki.process "filter_debug" {
 <details>
 <summary>Hint 1: wiring the fan-out</summary>
 
-`otelcol.receiver.loki` exposes a `.receiver` export that accepts Loki log entries.
+`forward_to` takes an array, so you can list multiple receivers to send logs to both paths simultaneously. `otelcol.receiver.loki` exposes a `.receiver` export that accepts Loki log entries.
 
 </details>
 
@@ -867,6 +915,29 @@ but we only need `source` and `value` for this Mission.
 make mission2-verify
 ```
 
+Then confirm both paths manually:
+
+**Path 2 (Loki - no DEBUG):** Open **Explore** in Grafana, select **Loki**, and set the time range to **Last 5 minutes**. Run:
+
+```
+{filename=~".+"} | json | level = `DEBUG`
+```
+
+This query searches for any logs with DEBUG level. You should see **no results**, which confirms your `stage.drop` is filtering them out before they reach Loki.
+
+To verify logs are still flowing, remove the level filter and run:
+
+```
+{filename=~".+"}
+```
+
+You should see INFO and WARN logs appearing.
+
+**Path 1 (S3 - all logs):** Run `make s3-list` in your terminal. Look for:
+
+- **File keys** like `logs/year=2026/month=04/day=13/hour=21/minute=54/logs_...txt` show log files are being written to S3 organized by timestamp
+- **DEBUG entries** in the content (`"level":"DEBUG"`) mixed with INFO and WARN confirms S3 is receiving all logs, not just the filtered ones that go to Loki
+
 ## Mission III: Selective Surveillance
 
 ```bash
@@ -881,9 +952,13 @@ We need to keep our network traffic to a minimum to maintain a low profile. Righ
 Go back to the pipeline you built in Foundation I and add head sampling to cut the volume down. Insert an `otelcol.processor.probabilistic_sampler` component between the OTLP receiver and batch processor. Set `sampling_percentage = 5.0` to keep only 5% of traces. While you're at it, think about what we're trading away here. What intelligence might slip through the cracks?
 <img width="2502" height="1405" alt="image" src="https://github.com/user-attachments/assets/ba811483-6c22-4aec-b5cf-b4ab7700b85a" />
 
+### Before You Start
+
+Open the **Alloy UI** at [localhost:12347](http://localhost:12347), click the **Graph** tab, and note the **trace rate** on the edges leading to Tempo. You'll compare this to the rate after you add sampling.
+
 ### Starter Code
 
-Add this component to your `config.alloy` and fill in the TODOs. Traces should enter the sampler **before** the batch processor.
+Add this [`otelcol.processor.probabilistic_sampler`](https://grafana.com/docs/alloy/latest/reference/components/otelcol/otelcol.processor.probabilistic_sampler/) component to your `config.alloy` and fill in the TODOs. Traces should enter the sampler **before** the batch processor.
 
 ```alloy
 /*
@@ -913,6 +988,8 @@ OTLP components use `.input` to receive data, just like you wired the batch proc
 make mission3-verify
 ```
 
+Then confirm in the **Alloy UI**: go to [localhost:12347](http://localhost:12347), click the **Graph** tab, and check the trace rate on the edges leading to Tempo. You should see a **significant drop** compared to before.
+
 ## Mission IV: Leave No (Error) Trace
 
 ```bash
@@ -940,7 +1017,7 @@ make deaddrop KEY="your-token"    # Unlock the dead drop with the assembled toke
 
 ### Starter Code
 
-Remove head sampling from the trace path and add tail sampling instead. Fill in the TODOs. Point the OTLP receiver at this processor, then continue to batch and Tempo as before.
+Remove head sampling from the trace path and add tail sampling instead. Fill in the TODOs. Point the OTLP receiver at this processor, then continue to batch and send to Tempo as before.
 
 ```alloy
 /*
@@ -953,14 +1030,14 @@ otelcol.processor.tail_sampling "mission4" {
 
   policy {
     name = "keep_all_errors"
-    type = TODO
+    type = "TODO"
 
     // TODO: add the inner block for this policy type
   }
 
   policy {
     name = "sample_normal_traffic"
-    type = TODO
+    type = "TODO"
 
     // TODO: add the inner block for this policy type
   }
@@ -1031,3 +1108,6 @@ make deaddrop KEY="..."
 
 - **Alloy not receiving traces?** Check `docker compose logs alloy` for connection errors
 - **Port conflicts?** Check ports 8080, 3000, 3100, 3200, 4317, 4318, 9009, 12347
+- **`illegal character U+201C`** - You have "smart quotes" (curly quotes) in your config, likely from copying text via a browser or rich-text editor. Replace all `"` and `"` with plain ASCII `"`.
+- **`scrape_timeout greater than scrape_interval`** - Add `scrape_timeout = "4s"` to your `prometheus.scrape` block (or any value less than `scrape_interval`).
+- **Mission 2: `NoSuchBucket`** - The S3 init container may have failed on startup. Recreate the bucket manually: `docker compose exec localstack curl -X PUT http://localhost:4566/audit-logs`
