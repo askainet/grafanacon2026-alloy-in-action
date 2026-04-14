@@ -117,6 +117,10 @@ func main() {
 	pathsHandler := handlers.NewPathsHandler(validPaths)
 	r.Get("/api/metrics/allowed-paths", pathsHandler.GetAllowedPathsRegex)
 
+	// Service discovery endpoint for bonus mission (prometheus.enrich)
+	sdHandler := handlers.NewSDHandler()
+	r.Get("/api/sd/targets", sdHandler.ServeHTTP)
+
 	// Admin endpoints for mission control
 	adminHandler := handlers.NewAdminHandler(controller)
 	s3Handler := handlers.NewS3Handler(cfg.S3Endpoint, "audit-logs", cfg.LokiEndpoint)
@@ -156,6 +160,11 @@ func main() {
 	// Start agent manager (sends heartbeats to /api/agents/heartbeat)
 	agentManager.Start(context.Background())
 	defer agentManager.Stop()
+
+	// Start backend monitor (health-checks LGTM stack dependencies)
+	backendMonitor := telemetry.NewBackendMonitor(metrics)
+	backendMonitor.Start()
+	defer backendMonitor.Stop()
 
 	// Start synthetic traffic generator (3 workers creating baseline telemetry)
 	trafficGen := traffic.NewGenerator(baseURL, 3)
