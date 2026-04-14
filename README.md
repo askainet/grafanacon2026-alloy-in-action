@@ -443,7 +443,7 @@ loki.write "docker_loki" {
 
 2. Next, open Explore from the Grafana sidebar.
 
-Explore is Grafana's query playground. It lets you run ad-hoc queries without building a dashboard.
+   Explore is Grafana's query playground. It lets you run ad-hoc queries without building a dashboard.
 
 3. Select **Loki** as the data source and try this query:
 
