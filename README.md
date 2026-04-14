@@ -124,8 +124,10 @@ If both pages load, you're good to go!
 
 > [!WARNING]
 > **Setup not working?**
-> - **Docker not running?** If you're using Docker Desktop, start it (or restart it if it is already running) and try again. If you're using Docker Engine, make sure the Docker daemon is running (`sudo systemctl start docker`).
-> - **Port conflicts?** Make sure ports 3000, 12347, 4317, and 4318 are free.
+> - **Docker not running?**
+>   If you're using Docker Desktop, start it (or restart it if it is already running) and try again. If you're using Docker Engine, make sure the Docker daemon is running (`sudo systemctl start docker`).
+> - **Port conflicts?**
+>   Make sure ports 3000, 12347, 4317, and 4318 are free.
 
 ### Open the Config File
 
@@ -774,7 +776,9 @@ The API at `http://mission-control:8080/api/metrics/allowed-paths` returns a **r
 Try looking at the endpoint to see what the response looks like: [localhost:8080/api/metrics/allowed-paths](http://localhost:8080/api/metrics/allowed-paths)
 
 > [!NOTE]
-> Use `localhost` when curling from your terminal. Inside the Alloy config, use `mission-control`, which is the Docker-internal hostname. Alloy runs inside the same Docker network as mission-control, but your terminal does not.
+> Use `localhost` when curling from your terminal. Inside the Alloy config, use `mission-control`, which is the Docker-internal hostname.
+>
+> Alloy runs inside the same Docker network as mission-control, but your terminal does not.
 
 </details>
 
@@ -848,7 +852,8 @@ The skills you picked up in Foundation II will come in handy here. Split your lo
 2. **Non-DEBUG only** -> Loki via a second `loki.process` and using a `stage.drop` to drop any `DEBUG` logs
 
 > [!NOTE]
-> **Why OTLP components for Path 1?** The S3 exporter (`otelcol.exporter.awss3`) is an OpenTelemetry component. There's no native Loki component for writing to S3. To bridge the gap, `otelcol.receiver.loki` accepts Loki log entries and converts them to OTLP format, so they can flow through the `otelcol` pipeline to S3.
+> **Why OTLP components for Path 1?**
+> The S3 exporter (`otelcol.exporter.awss3`) is an OpenTelemetry component. There's no native Loki component for writing to S3. To bridge the gap, `otelcol.receiver.loki` accepts Loki log entries and converts them to OTLP format, so they can flow through the `otelcol` pipeline to S3.
 
 <img width="2511" height="1411" alt="image" src="https://github.com/user-attachments/assets/ce6e21b3-4c1e-41db-b9ed-a1450fef230a" />
 
@@ -1141,12 +1146,17 @@ make mission4-verify
 ## Troubleshooting
 
 > [!CAUTION]
-> **`illegal character U+201C`** means you have "smart quotes" (curly quotes) in your config, likely from copying text via a browser or rich-text editor. Replace all `“` and `”` with plain ASCII double quotes (`"`).
+> **`illegal character U+201C`**
+> This means you have “smart quotes” (curly quotes) in your config, likely from copying text via a browser or rich-text editor. Replace all `“` and `”` with plain ASCII double quotes (`”`).
 
-- **Alloy not receiving traces?** Run `make alloy-logs` to check for connection errors.
-- **Port conflicts?** Check ports 8080, 3000, 3100, 3200, 4317, 4318, 9009, 12347.
-- **`scrape_timeout greater than scrape_interval`?** Add `scrape_timeout = "4s"` to your `prometheus.scrape` block (or any value less than `scrape_interval`).
-- **Mission 2: `NoSuchBucket`?** The S3 init container may have failed on startup. Recreate the bucket manually:
+- **Alloy not receiving traces?**
+  Run `make alloy-logs` to check for connection errors.
+- **Port conflicts?**
+  Check ports 8080, 3000, 3100, 3200, 4317, 4318, 9009, 12347.
+- **`scrape_timeout greater than scrape_interval`?**
+  Add `scrape_timeout = "4s"` to your `prometheus.scrape` block (or any value less than `scrape_interval`).
+- **Mission 2: `NoSuchBucket`?**
+  The S3 init container may have failed on startup. Recreate the bucket manually:
   ```bash
   docker compose exec localstack curl -X PUT http://localhost:4566/audit-logs
   ```
