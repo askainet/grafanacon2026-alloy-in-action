@@ -687,21 +687,19 @@ make mission1
 An adversary discovered that our server records the full request path as a metric label. They're now flooding us with requests to thousands of random URLs, paths like `/api/a3f8c2e1` that don't map to any real endpoint. Every unique path creates a new time series in Mimir, and cardinality is climbing fast.
 
 **Your orders:**
-Using what you learned in the Metrics foundation, fetch the list of legitimate paths with `remote.http` from `http://mission-control:8080/api/metrics/allowed-paths`, then use `prometheus.relabel` with a `keep` action on the `path` label to filter out the garbage. Only real routes should make it through to Mimir. The [Alloy standard library](https://grafana.com/docs/alloy/latest/reference/stdlib/) functions may be helpful here!
+You'll be expanding on what you did in the Metrics foundation. There is a pre-made regular expression provided for you to use at `http://mission-control:8080/api/metrics/allowed-paths`. Use `prometheus.relabel` with a `keep` action on the `path` label to filter out the garbage. The [Alloy standard library](https://grafana.com/docs/alloy/latest/reference/stdlib/) functions may be helpful here!
 
 <img width="2504" height="1407" alt="image" src="https://github.com/user-attachments/assets/6e3da07a-2b2f-47d8-b673-0bd6a0636860" />
 
 ### Before You Start
 
-Open **Explore** in Grafana, select **Mimir** as the data source, and run:
+Open [**Explore**](http://localhost:3000/explore) in Grafana, select **Mimir** as the data source, and run:
 
 ```
 http_requests_total
 ```
 
 If the query times out, try narrowing the time range to **Last 5 minutes**. That's the cardinality explosion in action. 
-
-There are so many junk series that Mimir can't even serve the query at wider time ranges. 
 
 Scroll through the series list and notice the random paths like `/api/a3f8c2e1` with `status="404"`. After you apply the fix, you should only see legitimate paths.
 
@@ -736,12 +734,9 @@ prometheus.relabel "mission1" {
 <details>
 <summary>Hint 1: you don't need to write regex</summary>
 
-The API at `http://mission-control:8080/api/metrics/allowed-paths` returns a **ready-made regex** for you. Your job isn't to craft a pattern. It's to figure out how to get that value from the API response into the `regex` field using Alloy expressions.
+The API at `http://mission-control:8080/api/metrics/allowed-paths` returns a **ready-made regex** for you.
 
-Try curling the endpoint to see what the response looks like:
-```bash
-curl -s http://localhost:8080/api/metrics/allowed-paths
-```
+Try looking at the endpoint to see what the response looks like: [localhost:8080/api/metrics/allowed-paths](http://localhost:8080/api/metrics/allowed-paths)
 
 > **Note:** Use `localhost` when curling from your terminal. Inside the Alloy config, use `mission-control`, that's the Docker-internal hostname. Alloy runs inside the same Docker network as mission-control, but your terminal does not.
 
@@ -750,7 +745,7 @@ curl -s http://localhost:8080/api/metrics/allowed-paths
 <details>
 <summary>Hint 2: accessing the response body</summary>
 
-`remote.http` exposes the fetched response body as `.content`. You can use it directly in expressions elsewhere in your config.
+`remote.http` exposes the fetched response body as `.content`. You can pass it to standard library functions or other components!
 
 </details>
 
@@ -764,7 +759,7 @@ The response body is JSON, not a plain string. Use `encoding.from_json()` from t
 <details>
 <summary>Hint 4: putting it together</summary>
 
-In Alloy, you can chain expressions together. The general pattern looks like:
+In Alloy, you can chain expressions together. The general pattern for this particular exercise looks like:
 
 ```
 encoding.from_json(some_component.content).some_field
@@ -789,11 +784,14 @@ Scraped metrics should flow through your **standardize** relabel component, then
 make mission1-verify
 ```
 
-Then confirm in Grafana: go to **Explore**, select **Mimir**, and run:
+Then you can confirm in the Alloy livedebugging view. 
 
-```
-http_requests_total
-```
+To do so:
+- Navigate to the Alloy UI at [localhost:12347](http://localhost:12347)
+- Click on `View` for `prometheus.remote_write.docker_mimir`
+- Click `livedebugging` at the top, under the component identifier
+- Wait for one scrape to come in and click `Stop` on the top right
+- In the search bar, enter `http_requests_total` to filter for only the relevant samples
 
 You should see only **legitimate paths** (like `/api/agents`, `/metrics`, etc.). No more random paths!
 
@@ -904,8 +902,8 @@ Check the [`loki.process` docs](https://grafana.com/docs/alloy/latest/reference/
 <details>
 <summary>Hint 3: stage details</summary>
 
-The stage can take a `source` (the extracted field to compare) and `value` (the string to match against) to directly compare the value. You can also perform more complex matching,
-but we only need `source` and `value` for this Mission.
+The stage can take a `source` (the extracted field to compare) and `value` (the string to match against) to directly compare the value. Only
+`source` and `value` are necessary for this mission, but it is possible to perform more complex matching.
 
 </details>
 
@@ -920,18 +918,10 @@ Then confirm both paths manually:
 **Path 2 (Loki - no DEBUG):** Open **Explore** in Grafana, select **Loki**, and set the time range to **Last 5 minutes**. Run:
 
 ```
-{filename=~".+"} | json | level = `DEBUG`
-```
-
-This query searches for any logs with DEBUG level. You should see **no results**, which confirms your `stage.drop` is filtering them out before they reach Loki.
-
-To verify logs are still flowing, remove the level filter and run:
-
-```
 {filename=~".+"}
 ```
 
-You should see INFO and WARN logs appearing.
+You should still see `INFO` logs but no `DEBUG` logs in the time since you reloaded your Alloy config.
 
 **Path 1 (S3 - all logs):** Run `make s3-list` in your terminal. Look for:
 
