@@ -86,7 +86,9 @@ Focusing on these 3 things will point us in the right direction as we configure 
 <img width="2506" height="1411" alt="image" src="https://github.com/user-attachments/assets/c188f4a8-4c43-4104-880a-6bf6de1f9ddf" />
 
 > [!IMPORTANT]
-> **Prerequisites:** make sure you have the following installed before continuing:
+> **Prerequisites**
+>
+> Make sure you have the following installed before continuing:
 > - [Docker Desktop](https://www.docker.com/products/docker-desktop/) or [Docker Engine](https://docs.docker.com/engine/install/)
 > - [Docker Compose](https://docs.docker.com/compose/install/) (included with Docker Desktop)
 
@@ -434,7 +436,7 @@ loki.write "docker_loki" {
 
 ### Reload and Verify
 
-> [!TIP]
+> [!IMPORTANT]
 > Remember to reload Alloy after every config change: `make alloy-reload`
 
 ### Verify Your Work
@@ -648,7 +650,7 @@ prometheus.remote_write "docker_mimir" {
 
 ### Reload and Verify
 
-> [!TIP]
+> [!IMPORTANT]
 > Remember to reload Alloy after every config change: `make alloy-reload`
 
 ### Verify Your Work
@@ -699,7 +701,9 @@ The color of the dotted line signifies what type of data are being transferred b
 # Break
 
 > [!NOTE]
-> **Nice work completing the foundations!** You now have a working pipeline for traces, logs, and metrics.
+> **Nice work completing the foundations!**
+>
+> You now have a working pipeline for traces, logs, and metrics.
 >
 > If you got stuck on any foundation, you can copy a checkpoint file to catch up:
 > ```bash
@@ -775,10 +779,8 @@ The API at `http://mission-control:8080/api/metrics/allowed-paths` returns a **r
 
 Try looking at the endpoint to see what the response looks like: [localhost:8080/api/metrics/allowed-paths](http://localhost:8080/api/metrics/allowed-paths)
 
-> [!NOTE]
-> Use `localhost` when curling from your terminal. Inside the Alloy config, use `mission-control`, which is the Docker-internal hostname.
->
-> Alloy runs inside the same Docker network as mission-control, but your terminal does not.
+
+Use `localhost` when curling from your terminal. Inside the Alloy config, use `mission-control`, which is the Docker-internal hostname.
 
 </details>
 
