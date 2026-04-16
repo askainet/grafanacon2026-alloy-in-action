@@ -345,7 +345,9 @@ Add this to your `config.alloy` file (below your traces pipeline) and fill in th
 loki.source.file "mission_control" {
   targets    = [{"__path__" = "/var/log/alloy/*.log"}]
 
-  // TODO: We need to add a file_match block with an argument `enabled = true`
+  file_match {
+    enabled = true
+  }
 
   forward_to = [TODO]  // Forward to loki.process receiver
 }
