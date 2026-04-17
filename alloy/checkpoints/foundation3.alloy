@@ -116,6 +116,7 @@ loki.process "mission_control_logs" {
 // [1/3] scrapes /metrics endpoint
 prometheus.scrape "mission_control" {
   scrape_interval = "5s"
+  scrape_timeout  = "4s"
 
   targets    = [{"__address__" = "mission-control:8080"}]
   forward_to = [prometheus.relabel.standardize_agent_labels.receiver]
