@@ -41,10 +41,21 @@
 # What is Alloy? When does it make sense to use it?
 
 <img width="2557" height="1413" alt="image" src="https://github.com/user-attachments/assets/75f0f830-636e-4c6e-a535-c8895acfd777" />
-<img width="2499" height="1399" alt="image" src="https://github.com/user-attachments/assets/98f4e0f9-0623-4733-8bc9-517cf2ace5e9" />
-<img width="2504" height="1408" alt="image" src="https://github.com/user-attachments/assets/1ec1c6ee-3126-4df3-8782-0a2f2fd39d23" />
+
+<img width="1438" height="806" alt="image" src="https://github.com/user-attachments/assets/2a495f57-66e8-4538-94a0-4c2cfbec1839" />
+
+<img width="1440" height="808" alt="image" src="https://github.com/user-attachments/assets/e7481ed6-c40b-4912-8aff-fc3146f0a73e" />
+
+<img width="1440" height="809" alt="image" src="https://github.com/user-attachments/assets/0a1b832b-5f4f-4d65-8bfe-df8444b5dc43" />
+
+<img width="1439" height="812" alt="image" src="https://github.com/user-attachments/assets/f6686b9e-5c61-4e03-b37d-ac79949a7d82" />
+
+<img width="1438" height="812" alt="image" src="https://github.com/user-attachments/assets/ca82350d-83f1-4ef2-9e35-743520a3d184" />
+
 <img width="2506" height="1408" alt="image" src="https://github.com/user-attachments/assets/d38d3741-d8ed-4d0f-95da-b4cb867f3b25" />
+
 <img width="2511" height="1409" alt="image" src="https://github.com/user-attachments/assets/a1c430ac-17db-4325-bc4a-fa554d5b85f4" />
+
 <img width="2508" height="1404" alt="image" src="https://github.com/user-attachments/assets/dbc34673-7dfc-4031-b800-75cff73bcf23" />
 
 # Alloy configuration language 101
