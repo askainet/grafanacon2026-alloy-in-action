@@ -860,10 +860,6 @@ The skills you picked up in Foundation II will come in handy here. Split your lo
 1. **All logs** -> S3 via `otelcol.receiver.loki` -> `otelcol.processor.batch` -> `otelcol.exporter.awss3`
 2. **Non-DEBUG only** -> Loki via a second `loki.process` and using a `stage.drop` to drop any `DEBUG` logs
 
-> [!NOTE]
-> **Why OTLP components for Path 1?**
-> The S3 exporter (`otelcol.exporter.awss3`) is an OpenTelemetry component. There's no native Loki component for writing to S3. To bridge the gap, `otelcol.receiver.loki` accepts Loki log entries and converts them to OTLP format, so they can flow through the `otelcol` pipeline to S3.
-
 <img width="2511" height="1411" alt="image" src="https://github.com/user-attachments/assets/ce6e21b3-4c1e-41db-b9ed-a1450fef230a" />
 
 ### Starter Code
@@ -933,6 +929,10 @@ loki.process "filter_debug" {
   forward_to = [loki.write.docker_loki.receiver]
 }
 ```
+
+> [!NOTE]
+> **Why OTLP components for Path 1?**
+> The S3 exporter (`otelcol.exporter.awss3`) is an OpenTelemetry component. There's no native Loki component for writing to S3. To bridge the gap, `otelcol.receiver.loki` accepts Loki log entries and converts them to OTLP format, so they can flow through the `otelcol` pipeline to S3.
 
 <details>
 <summary>Hint 1: wiring the fan-out</summary>
