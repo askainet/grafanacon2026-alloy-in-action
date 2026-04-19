@@ -52,12 +52,6 @@
 
 <img width="1438" height="812" alt="image" src="https://github.com/user-attachments/assets/ca82350d-83f1-4ef2-9e35-743520a3d184" />
 
-<img width="2506" height="1408" alt="image" src="https://github.com/user-attachments/assets/d38d3741-d8ed-4d0f-95da-b4cb867f3b25" />
-
-<img width="2511" height="1409" alt="image" src="https://github.com/user-attachments/assets/a1c430ac-17db-4325-bc4a-fa554d5b85f4" />
-
-<img width="2508" height="1404" alt="image" src="https://github.com/user-attachments/assets/dbc34673-7dfc-4031-b800-75cff73bcf23" />
-
 # Alloy configuration language 101
 
 ### Think of Alloy as our secret weapon that collects, transforms, and exports our telemetry data.
