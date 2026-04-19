@@ -378,7 +378,7 @@ Everything you've built so far uses Alloy's default engine, which reads configur
 |---|---|---|
 | Configuration | Alloy's native syntax | Standard upstream OTel Collector YAML |
 | Component focus | Alloy's native components, including first-class support for Prometheus-native workflows (scraping, service discovery, remote_write) | All [OpenTelemetry Collector core](https://github.com/open-telemetry/opentelemetry-collector) components plus a curated selection from [contrib](https://github.com/open-telemetry/opentelemetry-collector-contrib), enabling native OpenTelemetry pipelines end-to-end |
-| Stability | Stable default, backward compatibility guarantees | Experimental, operational parity still being developed |
+| Stability | Stable | Experimental |
 | Can coexist? | Yes, can run alongside the OTel engine via the [Alloy Engine extension](https://grafana.com/docs/alloy/latest/set-up/otel_engine/) | Same |
 
 Adopting the OTel engine is optional and fully backwards compatible. Existing Alloy configurations keep working unchanged unless you opt in.
