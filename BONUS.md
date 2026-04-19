@@ -364,3 +364,149 @@ backend_up
 ```
 
 You should see the `backend_up` metric now carrying `team`, `environment`, `aws_region`, `availability_zone`, and `instance_type` labels — infrastructure metadata that didn't exist on the original `/metrics` endpoint. You can now build dashboards that group backend health by team or availability zone, without the application needing to know anything about where it runs.
+
+## Running the OpenTelemetry Engine
+
+Everything you've built so far uses Alloy's default engine, which reads configuration written in [Alloy syntax](https://grafana.com/docs/alloy/latest/get-started/configuration-syntax/) (the `config.alloy` file you've been editing). As of [Alloy v1.14.0](https://grafana.com/blog/native-opentelemetry-inside-alloy-now-you-can-get-the-best-of-both-worlds/), Alloy also ships with an [experimental OpenTelemetry engine](https://grafana.com/docs/alloy/latest/introduction/otel_alloy/) that lets you run Alloy as a fully compatible OTel Collector, configured with standard upstream collector YAML, while retaining access to Alloy's features and integrations.
+
+> [!CAUTION]
+> The OpenTelemetry engine is **experimental** and, per the Alloy docs, [is subject to frequent breaking changes and may be removed with no equivalent replacement](https://grafana.com/docs/alloy/latest/introduction/otel_alloy/). Make sure you understand the risks before using an experimental feature in your environments.
+
+### Default engine vs. OpenTelemetry engine
+
+| | Default engine | OpenTelemetry engine |
+|---|---|---|
+| Configuration | Alloy's native syntax | Standard upstream OTel Collector YAML |
+| Component focus | Alloy's native components, including first-class support for Prometheus-native workflows (scraping, service discovery, remote_write) | All [OpenTelemetry Collector core](https://github.com/open-telemetry/opentelemetry-collector) components plus a curated selection from [contrib](https://github.com/open-telemetry/opentelemetry-collector-contrib), enabling native OpenTelemetry pipelines end-to-end |
+| Stability | Stable default, backward compatibility guarantees | Experimental, operational parity still being developed |
+| Can coexist? | Yes, can run alongside the OTel engine via the [Alloy Engine extension](https://grafana.com/docs/alloy/latest/set-up/otel_engine/) | Same |
+
+Adopting the OTel engine is optional and fully backwards compatible. Existing Alloy configurations keep working unchanged unless you opt in.
+
+> [!NOTE]
+> Default ports and logging formats may differ slightly between the two engines, so expect some operational differences when switching.
+
+> [!TIP]
+> If you need a component that isn't in Alloy's bundled set, you can build a custom Alloy binary with your own component selection using the [OpenTelemetry Collector Builder (OCB)](https://github.com/open-telemetry/opentelemetry-collector/tree/main/cmd/builder). Official docs on doing this with Alloy are coming soon.
+
+### Mission Objectives
+
+- [ ] Translate the Foundation 1 traces pipeline from Alloy syntax into an upstream OTel Collector YAML config
+- [ ] Swap the Alloy container over to the OTel engine and verify traces still reach Tempo
+
+### Build the Pipeline
+
+**Pipeline (same shape as Foundation 1):**
+
+```
+otlp receiver -> batch processor -> otlphttp exporter
+```
+
+The building blocks are the same ones you already know, just expressed in upstream OTel Collector YAML. Mechanical differences to keep in mind:
+
+- Pipelines are declared under `service.pipelines`, not wired through `output` / `forward_to`
+- Each component reference uses a type and an optional instance name separated by `/` (for example, `otlphttp/tempo`)
+- It's YAML, so indentation is significant
+
+### Starter Code
+
+Try translating the Alloy config from the Traces foundation mission into OTel Collector YAML. There's starter code below if you'd like, or try doing it from scratch if you're familiar with Collector configs ([configuration reference](https://opentelemetry.io/docs/collector/configuration/)).
+
+Create a new file at [alloy/otel-config.yaml](alloy/otel-config.yaml) and fill in the TODOs:
+
+```yaml
+# Foundation 1 traces pipeline, expressed as an OTel Collector config
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    send_batch_size: 100
+    send_batch_max_size: 200
+    timeout: 250ms
+
+exporters:
+  otlp_http/tempo:
+    endpoint: TODO  # Send to http://tempo:4318
+    tls:
+      insecure: true
+      insecure_skip_verify: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [TODO]   # Which receiver feeds this pipeline?
+      processors: [TODO]  # Which processor should traces flow through?
+      exporters: [TODO]   # Which exporter ships traces to Tempo?
+```
+
+<details>
+<summary>Hint: referencing components in the pipeline</summary>
+
+Each entry in `service.pipelines.*.{receivers,processors,exporters}` is the component's identifier from above. Use the bare type (`otlp`, `batch`) for components without an instance name, or `type/name` (like `otlphttp/tempo`) for ones that have one.
+
+</details>
+
+<details>
+<summary>Full solution</summary>
+
+```yaml
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    send_batch_size: 100
+    send_batch_max_size: 200
+    timeout: 250ms
+
+exporters:
+  otlp_http/tempo:
+    endpoint: http://tempo:4318
+    tls:
+      insecure: true
+      insecure_skip_verify: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/tempo]
+```
+
+</details>
+
+### Run the OTel engine
+
+To see traces flow through the OTel engine, swap the Alloy container's command. Both engines bind the same OTLP ports (`4317` and `4318`), so they can't both handle the same ports simultaneously without extra configuration.
+
+1. In [docker-compose.yml](docker-compose.yml), replace the `alloy` service's `command:` block with:
+
+   ```yaml
+   command:
+     - otel
+     - run
+     - --config=file:/etc/alloy/otel-config.yaml
+   ```
+
+2. Recreate the container:
+
+   ```bash
+   docker compose up -d alloy
+   ```
+
+3. Open the [Mission Control Overview dashboard](http://localhost:3000/d/mission-control-overview/mission-control-overview) and confirm the Traces panel has recent traces. Mission Control is still sending OTLP traces to `alloy:4318`, and the OTel engine is now receiving and exporting them to Tempo using the YAML config you just wrote.
+
+When you're done experimenting, you can revert the `command:` block in `docker-compose.yml` to the original `run /etc/alloy/config.alloy` form and `docker compose up -d alloy` again to return to the default engine.
