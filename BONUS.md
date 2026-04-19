@@ -364,3 +364,187 @@ backend_up
 ```
 
 You should see the `backend_up` metric now carrying `team`, `environment`, `aws_region`, `availability_zone`, and `instance_type` labels — infrastructure metadata that didn't exist on the original `/metrics` endpoint. You can now build dashboards that group backend health by team or availability zone, without the application needing to know anything about where it runs.
+
+### Automatic OpenTelemetry instrumentation with eBPF (Linux only)
+
+Alloy has a [`beyla.ebpf`](https://grafana.com/docs/alloy/latest/reference/components/beyla/beyla.ebpf/) component that is able to instrument any service where Alloy is running. It supports a wide variety of protocols, including HTTP/HTTP2, gRPC, SQL, MongoDB, Redis, and Kafka to name a few. It can export data in OpenTelemetry format, specifically metrics and traces. Since it's built with eBPF it doesn't require application restart or any configuration/source changes.
+
+This is useful when you want to easily instrument applications and you don't have the time or ability to instrument with the OpenTelemetry SDKs. It's safe to use the `beyla.ebpf` component with already instrumented services. The component automatically detects instrumentation and avoids duplicated telemetry.
+
+#### Prerequisites
+
+> [!IMPORTANT]
+> **eBPF requires elevated privileges.** The `beyla.ebpf` component needs access to kernel-level features, so the Alloy process must run as root or inside a privileged container.
+
+To enable eBPF in the workshop environment, stop the environment and replace the `alloy` service in `docker-compose.yml` with the following. The original `ports:` and `networks:` blocks are intentionally omitted because they're incompatible with `network_mode: host`.
+
+```yaml
+  alloy:
+    image: grafana/alloy:v1.15.0@sha256:579582bce40049f2e27bd1e445000689c907a41f0495cb0d0c7f65609316ba7c
+    privileged: true
+    pid: host
+    network_mode: host
+    environment:
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_REGION=us-east-1
+    volumes:
+      - ./alloy/:/etc/alloy/:ro
+      - logs:/var/log/alloy:ro
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12347
+      - --storage.path=/var/lib/alloy/data
+      - --stability.level=experimental
+      - /etc/alloy/config.alloy
+    restart: unless-stopped
+```
+
+Then restart the environment:
+
+```bash
+make stop
+make start
+```
+
+> [!NOTE]
+> `privileged: true` grants the container access to the host kernel's eBPF subsystem. `pid: host` shares the host's PID namespace so Beyla can discover processes to instrument. `network_mode: host` shares the host's network namespace so Beyla can observe network traffic. These are standard requirements for any eBPF-based tooling running in containers.
+
+#### Scenario
+
+You have a service (mission-control) that is serving HTTP traffic on port 8080. You'd like to instantly get RED (Request, Error and Duration) metrics for this application, using the OpenTelemetry semantic conventions. We'll use the `beyla.ebpf` component to collect this data for us, which can then be further enriched with other Alloy components.
+
+```alloy
+beyla.ebpf "my-service" {
+	discovery {
+    instrument {
+			open_ports = "8080"
+		}
+	}
+
+	metrics {
+		features = [
+			"application",
+		]
+	}
+}
+```
+
+The `open_ports` attribute inside the `discovery` -> `instrument` section shows you *how* we can configure the discovery criteria to add instrumentation to any service listening on port 8080. With the `metrics` -> `features` section, we can define which type of semantic convention telemetry we want to capture. In this case we have configured `application` metrics to be exported, which will generate HTTP semantic convention metrics (Beyla can also generate database, gRPC, and messaging metrics automatically when those protocols are detected on the instrumented process).
+
+**Your task:**
+Use [`metrics`](https://grafana.com/docs/alloy/latest/reference/components/beyla/beyla.ebpf/#metrics) documentation to add application service graph, application span and application host metrics, to enable the telemetry needed for Grafana Cloud Knowledge Graph and Application Observability.
+
+#### Build the Pipeline
+
+**Pipeline:**
+
+```
+  beyla.ebpf
+      |
+      v
+prometheus.scrape 
+```
+
+- Scrape metrics from the `beyla.ebpf` component and then connect them to your metrics pipeline
+- Send enriched metrics to Mimir
+
+#### Starter Code
+
+Add this to your `config.alloy` file and fill in the TODOs:
+
+```alloy
+/*
+  Bonus: Automatic OpenTelemetry instrumentation with eBPF
+  Pipeline: beyla.ebpf -> prometheus.scrape 
+*/
+
+// Step 1: Enable the Beyla component
+
+beyla.ebpf "service" {
+	discovery {
+    instrument {
+			open_ports = "TODO" // Choose your application service port
+		}
+	}
+
+	metrics {
+		features = [
+			"application", "TODO" // Check out the docs and see what other options you have available! What metrics are output?
+		]
+	}
+}
+
+// Step 2: Scrape metrics from beyla.ebpf
+prometheus.scrape "beyla" {
+	targets      = beyla.ebpf.service.targets
+	honor_labels = true
+	forward_to   = [prometheus.remote_write.docker_mimir.receiver]
+}
+
+// Step 3: Send generated metrics to Mimir
+// Note: `network_mode: host` for this exercise means the `mimir` hostname from the
+// Docker bridge network is not resolvable. Use `localhost:9009` since Mimir publishes
+// that port to the host.
+prometheus.remote_write "docker_mimir" {
+  endpoint {
+    url = "http://localhost:9009/api/v1/push"
+  }
+}
+```
+
+<details>
+<summary>Full solution</summary>
+
+```alloy
+/*
+  Bonus: Automatic OpenTelemetry instrumentation with eBPF
+  Pipeline: beyla.ebpf -> prometheus.scrape 
+*/
+
+// Step 1: Enable the Beyla component
+
+beyla.ebpf "service" {
+	discovery {
+    instrument {
+			open_ports = "8080"
+		}
+	}
+
+	metrics {
+		features = [
+			"application", "application_span", "application_service_graph", "application_host" 
+		]
+	}
+}
+
+// Step 2: Scrape metrics from beyla.ebpf
+prometheus.scrape "beyla" {
+	targets      = beyla.ebpf.service.targets
+	honor_labels = true
+	forward_to   = [prometheus.remote_write.docker_mimir.receiver]
+}
+
+// Step 3: Send generated metrics to Mimir
+// Note: `network_mode: host` for this exercise means the `mimir` hostname from the
+// Docker bridge network is not resolvable. Use `localhost:9009` since Mimir publishes
+// that port to the host.
+prometheus.remote_write "docker_mimir" {
+  endpoint {
+    url = "http://localhost:9009/api/v1/push"
+  }
+}
+```
+</details>
+
+#### Verify Your Work
+
+Reload the config:
+```bash
+make alloy-reload
+```
+
+Wait about 30 seconds for scrapes to run, then open Explore in Grafana, select Mimir as the data source, and run:
+```
+http_server_request_duration_seconds
+```
