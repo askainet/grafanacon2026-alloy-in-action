@@ -139,6 +139,7 @@ func main() {
 	r.Route("/admin", func(r chi.Router) {
 		r.Get("/status", adminHandler.Status)
 		r.Post("/missions/{id}/start", adminHandler.StartMission)
+		r.Post("/missions/{id}/stop", adminHandler.StopMission)
 		r.Post("/reset", adminHandler.Reset)
 		r.Get("/mission1/verify", mimirHandler.Verify)
 		r.Get("/mission3/verify", mission3Handler.Verify)

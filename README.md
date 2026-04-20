@@ -844,6 +844,8 @@ Then you can confirm with the Alloy livedebugging view:
 
 You should see only **legitimate paths** (like `/api/agents`, `/metrics`, etc.). No more random paths!
 
+>[!TIP] Once you're done, you can run `make mission1-stop` to lower the cardinality again
+
 ## Mission II: Operation Cold Storage
 
 ```bash

@@ -45,6 +45,10 @@ mission1: ## Start Mission 1 (High Cardinality)
 	@curl -s -X POST http://localhost:8080/admin/missions/mission1/start | jq .
 	@echo "Mission 1 activated: High Cardinality Explosion"
 
+mission1-stop: ## Stop Mission 1 (halt high-cardinality probe traffic)
+	@curl -s -X POST http://localhost:8080/admin/missions/mission1/stop | jq .
+	@echo "Mission 1 deactivated: rogue path probing stopped"
+
 mission1-verify: ## Verify Mission 1 (check if rogue paths are filtered)
 	@curl -s http://localhost:8080/admin/mission1/verify | jq .
 

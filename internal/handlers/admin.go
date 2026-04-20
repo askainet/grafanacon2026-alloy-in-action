@@ -79,6 +79,23 @@ func (h *AdminHandler) StartMission(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// StopMission deactivates a mission by ID
+func (h *AdminHandler) StopMission(w http.ResponseWriter, r *http.Request) {
+	missionID := chi.URLParam(r, "id")
+
+	if err := h.controller.Deactivate(r.Context(), missionID); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":  "deactivated",
+		"mission": missionID,
+	})
+}
+
 // Reset deactivates all missions
 func (h *AdminHandler) Reset(w http.ResponseWriter, r *http.Request) {
 	h.controller.DeactivateAll(r.Context())
