@@ -163,7 +163,7 @@ Open the project using a text editor of your choice.
 Field agents are conducting operations around the world, and `mission-control` is tracking every request that flows through the system.
 These operations generate **traces**, detailed records of each request's journey through the application.
 
-Right now, those traces are being generated but going nowhere. Without a pipeline to collect them, you're flying blind.
+Right now, those traces are being generated but going nowhere, since Alloy isn't configured to receive them.
 
 **Your task:**
 Build a trace pipeline so you can see what's happening inside mission-control.
@@ -316,7 +316,7 @@ config reloaded
 
 Mission-control generates operational logs: JSON-formatted records of everything happening in the system. Agent check-ins, status updates, and internal events.
 
-These logs are written to files inside the container, but no one's reading them. Without a pipeline to collect and ship them, you're missing critical intel.
+These logs are written to files inside the container but no one's reading them, just like the previous section.
 
 The environment is set up to mimic a scenario where Alloy is running on and has access to the machine's filesystem (a Daemonset in Kubernetes or simply an Alloy
 collector running on each VM).
