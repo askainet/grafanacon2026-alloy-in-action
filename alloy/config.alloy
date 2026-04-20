@@ -88,7 +88,79 @@ loki.process "mission_control_logs" {
     }
   }
 
-  forward_to = [loki.write.docker_loki.receiver]  // Forward to the loki.write receiver
+  forward_to = [
+    otelcol.receiver.loki.all_logs.receiver,  // Forward all logs to the Loki receiver for S3 export
+    loki.process.filter_debug.receiver,       // Forward logs to the next processor to filter out DEBUG logs before sending to Loki
+  ]
+}
+
+
+/*
+  Mission II: Operation Cold Storage
+  Pipeline:
+    Path 1 (all logs): otelcol.receiver.loki -> otelcol.processor.batch -> otelcol.exporter.awss3
+    Path 2 (non-DEBUG): loki.process -> loki.write
+*/
+
+// TODO: update loki.process.mission_control_logs forward_to with two receivers
+
+// Path 1: Bridge Loki logs to OTLP format for S3 export
+otelcol.receiver.loki "all_logs" {
+  output {
+    logs = [otelcol.processor.batch.s3_logs.input]
+  }
+}
+
+otelcol.processor.batch "s3_logs" {
+  timeout             = "10s"
+  send_batch_size     = 100
+  send_batch_max_size = 200
+
+  output {
+    logs = [otelcol.exporter.awss3.audit_logs.input]
+  }
+}
+
+otelcol.exporter.awss3 "audit_logs" {
+  s3_uploader {
+    s3_bucket = "audit-logs"
+    s3_prefix = "logs"
+
+    endpoint            = "http://localstack:4566"
+    disable_ssl         = true
+    s3_force_path_style = true
+  }
+
+  marshaler {
+    type = "body"
+  }
+
+  sending_queue {
+    batch {
+      flush_timeout = "500ms"
+      min_size      = 100
+      sizer         = "items"
+    }
+  }
+}
+
+// Path 2: Filter logs before sending to Loki
+loki.process "filter_debug" {
+  stage.json {
+    expressions = {
+      // Which JSON field contains the log level? Try using livedebugging to see what an example log line looks like!
+      level = "level",
+    }
+  }
+
+  // TODO: add a stage to drop the logs you don't want forwarded to Loki
+
+  stage.drop {
+    source = "level"
+    value = "DEBUG"
+  }
+
+  forward_to = [loki.write.docker_loki.receiver]
 }
 
 // Step 3: Send logs to Loki
