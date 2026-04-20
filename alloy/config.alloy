@@ -20,9 +20,24 @@ otelcol.receiver.otlp "default" {
   }
 // OpenTelemetry components use `output` to send data and `.input` to receive it:
   output {
-    traces = [otelcol.processor.batch.default.input]  // Forward to the batch processor's input hint: component_type.label.input
+    traces = [otelcol.processor.probabilistic_sampler.mission3.input]  // Forward received traces to the probabilistic sampler processor
   }
 }
+
+
+/*
+  Mission III: Selective Surveillance
+  Pipeline: otelcol.receiver.otlp -> otelcol.processor.probabilistic_sampler -> otelcol.processor.batch -> otelcol.exporter.otlphttp
+*/
+
+otelcol.processor.probabilistic_sampler "mission3" {
+  sampling_percentage = 5.0
+
+  output {
+    traces = [otelcol.processor.batch.default.input]  // Forward sampled traces to the batch processor
+  }
+}
+
 
 // Step 2: Batch traces before exporting
 
