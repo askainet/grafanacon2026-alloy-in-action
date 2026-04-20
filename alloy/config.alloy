@@ -158,7 +158,29 @@ prometheus.relabel "standardize_agent_labels" {
     regex  = "^region$"
   }
 
-  forward_to = [prometheus.remote_write.docker_mimir.receiver]  // Forward to prometheus.remote_write receiver
+  forward_to = [prometheus.relabel.mission1.receiver]
+}
+
+
+/*
+  Mission I: Rogue Dimension
+  Pipeline: remote.http -> prometheus.relabel -> prometheus.remote_write
+*/
+
+// Step 1: Fetch the allowlist of legitimate paths
+remote.http "allowed_paths_regex" {
+  url = "http://mission-control:8080/api/metrics/allowed-paths"
+}
+
+// Step 2: Filter - only keep metrics where "path" is a known legitimate route
+prometheus.relabel "mission1" {
+  rule {
+    action        = "keep"
+    source_labels = ["path"]
+    regex         = json_path(remote.http.allowed_paths_regex.content, ".regex")[0]  // Use the first regex from the allowlist response
+  }
+
+  forward_to = [prometheus.remote_write.docker_mimir.receiver]
 }
 
 // Step 3: Send metrics to Mimir
