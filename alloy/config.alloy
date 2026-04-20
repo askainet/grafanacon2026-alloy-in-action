@@ -48,3 +48,53 @@ otelcol.exporter.otlphttp "docker_tempo" {
     }
   }
 }
+
+
+/*
+  Foundation 2: Logs Pipeline
+  Pipeline: loki.source.file -> loki.process -> loki.write
+*/
+// Step 1: Discover and read files
+
+loki.source.file "mission_control" {
+  targets    = [{"__path__" = "/var/log/alloy/*.log"}]
+
+  file_match {
+    enabled = true
+  }
+
+  forward_to = [loki.process.mission_control_logs.receiver]  // Forward to loki.process receiver
+}
+
+/*
+Step 2: Extract "component" from JSON and promote to label
+Original log: {"level":"INFO","component":"agents","msg":"Request received"}
+Labels are indexed - makes filtering fast in Grafana
+*/
+
+loki.process "mission_control_logs" {
+//`stage.json` parses the log body
+  stage.json {
+    expressions = {
+      component = "component",    // Extract the "component" field from the JSON log body
+    }
+  }
+
+// Add the extracted field as a Loki label
+//`stage.labels` adds extracted fields to Loki labels
+  stage.labels {
+    values = {
+      component = "",  // Empty string means "use the extracted value with the same name."
+    }
+  }
+
+  forward_to = [loki.write.docker_loki.receiver]  // Forward to the loki.write receiver
+}
+
+// Step 3: Send logs to Loki
+
+loki.write "docker_loki" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
