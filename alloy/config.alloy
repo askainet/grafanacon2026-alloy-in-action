@@ -20,21 +20,53 @@ otelcol.receiver.otlp "default" {
   }
 // OpenTelemetry components use `output` to send data and `.input` to receive it:
   output {
-    traces = [otelcol.processor.probabilistic_sampler.mission3.input]  // Forward received traces to the probabilistic sampler processor
+    traces = [otelcol.processor.tail_sampling.mission4.input]  // Forward received traces to the probabilistic sampler processor
   }
 }
 
 
+// /*
+//   Mission III: Selective Surveillance
+//   Pipeline: otelcol.receiver.otlp -> otelcol.processor.probabilistic_sampler -> otelcol.processor.batch -> otelcol.exporter.otlphttp
+// */
+
+// otelcol.processor.probabilistic_sampler "mission3" {
+//   sampling_percentage = 5.0
+
+//   output {
+//     traces = [otelcol.processor.batch.default.input]  // Forward sampled traces to the batch processor
+//   }
+// }
+
+
 /*
-  Mission III: Selective Surveillance
-  Pipeline: otelcol.receiver.otlp -> otelcol.processor.probabilistic_sampler -> otelcol.processor.batch -> otelcol.exporter.otlphttp
+  Mission IV: Leave No (Error) Trace
+  Pipeline: otelcol.receiver.otlp -> otelcol.processor.tail_sampling -> otelcol.processor.batch -> otelcol.exporter.otlphttp
 */
 
-otelcol.processor.probabilistic_sampler "mission3" {
-  sampling_percentage = 5.0
+otelcol.processor.tail_sampling "mission4" {
+  decision_wait = "10s"
+
+    policy {
+    name = "keep_all_errors"
+    type = "status_code"
+
+    status_code {
+      status_codes = ["ERROR"]
+    }
+  }
+
+  policy {
+    name = "sample_normal_traffic"
+    type = "probabilistic"
+
+    probabilistic {
+      sampling_percentage = 5.0
+    }
+  }
 
   output {
-    traces = [otelcol.processor.batch.default.input]  // Forward sampled traces to the batch processor
+    traces = [otelcol.processor.batch.default.input]
   }
 }
 
