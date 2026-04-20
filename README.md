@@ -920,7 +920,8 @@ otelcol.exporter.awss3 "audit_logs" {
 loki.process "filter_debug" {
   stage.json {
     expressions = {
-      level = "TODO",  // which JSON field contains the log level?
+      // Which JSON field contains the log level? Try using livedebugging to see what an example log line looks like!
+      level = "TODO",
     }
   }
 
