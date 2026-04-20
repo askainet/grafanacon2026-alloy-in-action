@@ -98,3 +98,73 @@ loki.write "docker_loki" {
     url = "http://loki:3100/loki/api/v1/push"
   }
 }
+
+
+/*
+  Foundation 3: Metrics Pipeline
+  Pipeline: prometheus.scrape -> prometheus.relabel -> prometheus.remote_write
+*/
+
+// Step 1: Scrape metrics from mission-control
+
+prometheus.scrape "mission_control" {
+  scrape_interval = "5s"
+  scrape_timeout  = "4s"
+
+  targets    = [{"__address__" = "mission-control:8080"}]
+  forward_to = [prometheus.relabel.standardize_agent_labels.receiver]  // Forward to prometheus.relabel.standardize_agent_labels receiver
+}
+
+// Step 2: Standardize label names
+
+/*
+  Standardize labels so all agent metrics use consistent naming
+
+  Before:
+    active_agents{agent_id="ALPHA-007", country_code="US"}
+    agent_comms_total{id="ALPHA-007", region="US"}
+
+  After:
+    active_agents{agent_id="ALPHA-007", country_code="US"}
+    agent_comms_total{agent_id="ALPHA-007", country_code="US"}
+
+  Rename: id -> agent_id, region -> country_code
+*/
+
+prometheus.relabel "standardize_agent_labels" {
+  rule {
+    action        = "replace"
+    source_labels = ["id"]
+    regex         = "(.+)"
+    target_label  = "agent_id"
+  }
+
+  rule {
+    action = "labeldrop"
+    regex  = "^id$"
+  }
+
+  // We'll do the same with the "region" label to rename it to "country_code" and drop the old label
+
+  rule {
+    action        = "replace"
+    source_labels = ["region"]
+    regex         = "(.+)"
+    target_label  = "country_code"
+  }
+
+  rule {
+    action = "labeldrop"
+    regex  = "^region$"
+  }
+
+  forward_to = [prometheus.remote_write.docker_mimir.receiver]  // Forward to prometheus.remote_write receiver
+}
+
+// Step 3: Send metrics to Mimir
+
+prometheus.remote_write "docker_mimir" {
+  endpoint {
+    url = "http://mimir:9009/api/v1/push"
+  }
+}
