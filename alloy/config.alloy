@@ -1,3 +1,50 @@
 livedebugging {
   enabled = true
 }
+
+/*
+  Foundation 1: Traces Pipeline
+  Pipeline: otelcol.receiver.otlp -> otelcol.processor.batch -> otelcol.exporter.otlphttp
+*/
+
+// Step 1: Receive OTLP traces from mission-control
+
+//The receiver listens for incoming traces. Mission-control sends traces using OTLP, so you need both gRPC and HTTP endpoints which are 4317 annd 4318 by default.
+otelcol.receiver.otlp "default" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+// OpenTelemetry components use `output` to send data and `.input` to receive it:
+  output {
+    traces = [otelcol.processor.batch.default.input]  // Forward to the batch processor's input hint: component_type.label.input
+  }
+}
+
+// Step 2: Batch traces before exporting
+
+otelcol.processor.batch "default" {
+  send_batch_size     = 100
+  send_batch_max_size = 200
+  timeout             = "250ms"
+
+  output {
+    traces = [otelcol.exporter.otlphttp.docker_tempo.input]  // Forward to the Tempo exporter's input
+  }
+}
+
+
+// Step 3: Export traces to Tempo
+
+otelcol.exporter.otlphttp "docker_tempo" {
+  client {
+    endpoint = "http://tempo:4318"  // Send to http://tempo:4318
+    tls {
+      insecure             = true
+      insecure_skip_verify = true
+    }
+  }
+}
